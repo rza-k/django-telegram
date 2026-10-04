@@ -94,6 +94,9 @@ class BaseHandler:
         if cq and cq.message:
             return cast(Chat, cq.message.chat)
 
+        if cq and cq.inline_message_id:
+            return cast(Chat, cq.from_user)
+
         if self.inline_query and self.inline_query.id:
             return cast(Chat, self.inline_query.from_user)
 
@@ -127,6 +130,11 @@ class BaseHandler:
     def chat_id(self) -> int:
         return self.chat.id if self.chat else 0
 
+    @property
+    def inline_message_id(self) -> str | None:
+        cq = self.update.callback_query
+        return cq.inline_message_id if cq else None
+
     @cached_property
     def user_obj(self) -> UserDB:
         if not self.user:
@@ -154,6 +162,10 @@ class BaseHandler:
         return self.user_obj.step if self.user_obj else ""
 
     def is_private(self) -> bool:
+        if self.is_inline_callback():
+            # location is unknown (could be a group or someone else's chat)
+            return False
+
         if self.inline_query and self.inline_query.from_user:
             return self.inline_query.chat_type in ["private", "sender"]
 
@@ -187,6 +199,9 @@ class BaseHandler:
             return True
 
         return False
+
+    def is_inline_callback(self) -> bool:
+        return bool(self.inline_message_id)
 
     def has_joined_channel(self, chat_id, user_id):
         chat_id = str(chat_id)
