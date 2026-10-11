@@ -534,7 +534,7 @@ class StickerSet(_BaseModel):
 
 class InputSticker(_BaseModel):
     sticker: str
-    format_: str = Field(..., alias="format")  # "static", "animated", "video"
+    format: Literal["static", "animated", "video"]
     emoji_list: list[str]
     mask_position: MaskPosition | None = None
     keywords: list[str] | None = None
@@ -772,17 +772,17 @@ class RichBlockTableCell(_BaseModel):
     is_header: bool | None
     colspan: int | None
     rowspan: int | None
-    align: str
-    valign: str
+    align: Literal["left", "center", "right"]
+    valign: Literal["top", "middle", "bottom"]
 
 
 class RichBlockListItem(_BaseModel):
     label: str
     blocks: List[RichBlock]
-    has_checkbox: bool | None
-    is_checked: bool | None
-    value: int | None
-    type: str | None
+    has_checkbox: bool | None = None
+    is_checked: bool | None = None
+    value: int | None = None
+    type: Literal["a", "A", "i", "I", "1"] | None = None
 
 
 class RichBlockParagraph(_BaseModel):
@@ -936,7 +936,7 @@ class InputRichBlockListItem(_BaseModel):
     has_checkbox: bool | None = None
     is_checked: bool | None = None
     value: int | None = None
-    type: str | None = None
+    type: Literal["a", "A", "i", "I", "1"] | None = None
 
 
 class InputRichBlockParagraph(_BaseModel):
@@ -1772,7 +1772,7 @@ class KeyboardButtonPollType(_BaseModel):
 class KeyboardButton(_BaseModel):
     text: str
     icon_custom_emoji_id: str | None = None
-    style: str | None = None  # Must be one of "danger", "success" or "primary" or None
+    style: Literal["danger", "success", "primary"] | None = None
     request_users: KeyboardButtonRequestUsers | None = None
     request_chat: KeyboardButtonRequestChat | None = None
     request_managed_bot: KeyboardButtonRequestManagedBot | None = None
@@ -1815,7 +1815,7 @@ class LoginUrl(_BaseModel):
 class InlineKeyboardButton(_BaseModel):
     text: str
     icon_custom_emoji_id: str | None = None
-    style: str | None = None  # Must be one of "danger", "success" or "primary" or None
+    style: Literal["danger", "success", "primary"] | None = None
     url: str | None = None
     callback_data: str | None = None
     web_app: WebAppInfo | None = None
@@ -1902,7 +1902,7 @@ class InlineQueryResultGif(_BaseModel):
     gif_height: int | None = None
     gif_duration: int | None = None
     thumbnail_url: str
-    thumbnail_mime_type: str | None = None
+    thumbnail_mime_type: Literal["image/jpeg", "image/gif", "video/mp4"] = "image/jpeg"
     title: str | None = None
     caption: str | None = None
     parse_mode: str | None = None
@@ -1920,7 +1920,7 @@ class InlineQueryResultMpeg4Gif(_BaseModel):
     mpeg4_height: int | None = None
     mpeg4_duration: int | None = None
     thumbnail_url: str
-    thumbnail_mime_type: str | None = None
+    thumbnail_mime_type: Literal["image/jpeg", "image/gif", "video/mp4"] = "image/jpeg"
     title: str | None = None
     caption: str | None = None
     parse_mode: str | None = None
@@ -3025,7 +3025,7 @@ class StarTransactions(_BaseModel):
 
 
 class SuggestedPostPrice(_BaseModel):
-    currency: str
+    currency: Literal["XTR", "TON"]
     amount: int
 
 
