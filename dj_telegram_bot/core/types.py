@@ -49,6 +49,7 @@ class Update(_BaseModel):
     removed_chat_boost: ChatBoostRemoved | None = None
     managed_bot: ManagedBotUpdated | None = None
     subscription: BotSubscriptionUpdated | None = None
+    stopped_message_generation: MessageGenerationStopped | None = None
 
 
 class User(_BaseModel):
@@ -368,6 +369,12 @@ class ReplyParameters(_BaseModel):
         return self
 
 
+class EphemeralMessageParameters(_BaseModel):
+    receiver_user_id: int
+    callback_query_id: str | None = None
+    replace_callback_query_message: bool | None = None
+
+
 class MessageOriginUser(_BaseModel):
     type: Literal["user"] = "user"
     date: int
@@ -568,6 +575,48 @@ class InputRichMessage(_BaseModel):
     skip_entity_detection: bool | None = None
 
 
+class RichMessageButton(_BaseModel):
+    text: RichText
+    style: Literal["danger", "success", "primary", "link"] | None = None
+    url: str | None = None
+    callback_data: str | None = None
+    web_app: WebAppInfo | None = None
+    login_url: LoginUrl | None = None
+    switch_inline_query: str | None = None
+    switch_inline_query_current_chat: str | None = None
+    switch_inline_query_chosen_chat: SwitchInlineQueryChosenChat | None = None
+    copy_text: CopyTextButton | None = None
+    disabled: DisabledButton | None = None
+
+    @model_validator(mode="after")
+    def _check_exactly_one_type(self):
+        used = [
+            name
+            for name in (
+                "url",
+                "callback_data",
+                "web_app",
+                "login_url",
+                "switch_inline_query",
+                "switch_inline_query_current_chat",
+                "switch_inline_query_chosen_chat",
+                "copy_text",
+                "disabled",
+            )
+            if getattr(self, name) is not None
+        ]
+        if len(used) != 1:
+            raise ValueError(
+                "Exactly one of the button type fields must be used, "
+                f"got: {used or 'none'}."
+            )
+
+        if self.style == "link" and self.callback_data is None:
+            raise ValueError('Style "link" is allowed only for callback buttons.')
+
+        return self
+
+
 class RichTextBold(_BaseModel):
     type: str = "bold"
     text: RichText
@@ -685,6 +734,11 @@ class RichTextBotCommand(_BaseModel):
     bot_command: str
 
 
+class RichTextButton(_BaseModel):
+    type: str = "button"
+    button: RichMessageButton
+
+
 class RichTextAnchor(_BaseModel):
     type: str = "anchor"
     name: str
@@ -775,7 +829,13 @@ class RichBlockList(_BaseModel):
 class RichBlockBlockQuotation(_BaseModel):
     type: str = "blockquote"
     blocks: list[RichBlock]
-    credit: RichText
+    credit: RichText | None = None
+
+
+class RichBlockExpandableBlockQuotation(_BaseModel):
+    type: str = "expandable_blockquote"
+    text: RichText
+    credit: RichText | None = None
 
 
 class RichBlockPullQuotation(_BaseModel):
@@ -801,6 +861,7 @@ class RichBlockTable(_BaseModel):
     cells: list[list[RichBlockTableCell]]
     is_bordered: bool | None = None
     is_striped: bool | None = None
+    is_compact: bool | None = None
     caption: RichText | None = None
 
 
@@ -820,6 +881,12 @@ class RichBlockMap(_BaseModel):
     caption: RichBlockCaption | None = None
 
 
+class RichBlockButtons(_BaseModel):
+    type: str = "buttons"
+    buttons: list[RichMessageButton]
+    align: Literal["left", "center", "right"] | None = None
+
+
 class RichBlockAnimation(_BaseModel):
     type: str = "animation"
     animation: Animation
@@ -830,6 +897,12 @@ class RichBlockAnimation(_BaseModel):
 class RichBlockAudio(_BaseModel):
     type: str = "audio"
     audio: Audio
+    caption: RichBlockCaption | None = None
+
+
+class RichBlockDocument(_BaseModel):
+    type: str = "document"
+    document: Document
     caption: RichBlockCaption | None = None
 
 
@@ -960,6 +1033,12 @@ class InputRichBlockMap(_BaseModel):
     width: int | None = None
     height: int | None = None
     caption: RichBlockCaption | None = None
+
+
+class InputRichBlockButtons(_BaseModel):
+    type: str = "buttons"
+    buttons: list[RichMessageButton]
+    align: Literal["left", "center", "right"] | None = None
 
 
 class InputRichBlockAnimation(_BaseModel):
@@ -1213,6 +1292,12 @@ class BotSubscriptionUpdated(_BaseModel):
     user: User
     invoice_payload: str
     state: Literal["canceled", "active", "failed"]
+
+
+class MessageGenerationStopped(_BaseModel):
+    chat: Chat
+    message_thread_id: int | None = None
+    draft_id: int
 
 
 class PollOptionAdded(_BaseModel):
@@ -1499,6 +1584,7 @@ class ChatAdministratorRights(_BaseModel):
     can_manage_topics: bool | None = None
     can_manage_direct_messages: bool | None = None
     can_manage_tags: bool | None = None
+    can_send_welcome_messages: bool | None = None
 
 
 class ChatMemberUpdated(_BaseModel):
@@ -1541,6 +1627,7 @@ class ChatMemberAdministrator(_BaseModel):
     can_manage_direct_messages: bool | None = None
     can_manage_tags: bool | None = None
     custom_title: str | None = None
+    can_send_welcome_messages: bool | None = None
 
 
 class ChatMemberMember(_BaseModel):
@@ -1702,6 +1789,7 @@ class ReplyKeyboardMarkup(_BaseModel):
     one_time_keyboard: bool | None = None
     input_field_placeholder: str | None = None
     selective: bool | None = None
+    force_reply: bool | None = None
 
 
 class ReplyKeyboardRemove(_BaseModel):
@@ -1738,10 +1826,12 @@ class InlineKeyboardButton(_BaseModel):
     copy_text: CopyTextButton | None = None
     callback_game: CallbackGame | None = None
     pay: bool | None = None
+    disabled: DisabledButton | None = None
 
 
 class InlineKeyboardMarkup(_BaseModel):
     inline_keyboard: list[list[InlineKeyboardButton]]
+    force_reply: bool | None = None
 
 
 class InlineQueryResultsButton(_BaseModel):
@@ -2096,6 +2186,10 @@ class AnswerInlineQuery(_BaseModel):
     button: InlineQueryResultsButton | None = None
 
 
+class DisabledButton(_BaseModel):
+    pass
+
+
 class CallbackQuery(_BaseModel):
     id: str
     from_user: User = Field(..., alias="from")
@@ -2334,6 +2428,9 @@ class GiftInfo(_BaseModel):
 class UniqueGiftInfo(_BaseModel):
     gift: UniqueGift
     origin: str
+    text: str | None = None
+    entities: list[MessageEntity] | None = None
+    is_private: bool | None = None
     last_resale_currency: str | None = None
     last_resale_amount: int | None = None
     owned_gift_id: str | None = None
@@ -3266,6 +3363,7 @@ RichText = (
     | RichTextHashtag
     | RichTextCashtag
     | RichTextBotCommand
+    | RichTextButton
     | RichTextAnchor
     | RichTextAnchorLink
     | RichTextReference
@@ -3282,14 +3380,17 @@ RichBlock = (
     | RichBlockAnchor
     | RichBlockList
     | RichBlockBlockQuotation
+    | RichBlockExpandableBlockQuotation
     | RichBlockPullQuotation
     | RichBlockCollage
     | RichBlockSlideshow
     | RichBlockTable
     | RichBlockDetails
     | RichBlockMap
+    | RichBlockButtons
     | RichBlockAnimation
     | RichBlockAudio
+    | RichBlockDocument
     | RichBlockPhoto
     | RichBlockVideo
     | RichBlockVoiceNote

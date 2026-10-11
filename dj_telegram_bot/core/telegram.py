@@ -23,6 +23,7 @@ from dj_telegram_bot.core.types import (
     ChatMember,
     ChatMemberAdapter,
     ChatPermissions,
+    EphemeralMessageParameters,
     File,
     ForumTopic,
     GameHighScore,
@@ -251,6 +252,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
         link_preview_options: LinkPreviewOptions | None = None,
@@ -278,6 +280,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "parse_mode": parse_mode,
             "entities": entities,
             "link_preview_options": link_preview_options,
@@ -461,6 +464,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -494,6 +498,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "caption": caption,
             "parse_mode": parse_mode,
             "caption_entities": caption_entities,
@@ -521,6 +526,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -558,6 +564,7 @@ class Telegram:
             "chat_id": chat_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "caption": caption,
             "parse_mode": parse_mode,
             "caption_entities": caption_entities,
@@ -585,6 +592,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -618,6 +626,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "caption": caption,
             "parse_mode": parse_mode,
             "caption_entities": caption_entities,
@@ -645,6 +654,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         thumbnail: str | InputFile | None = None,
         caption: str | None = None,
         parse_mode: str | None = "html",
@@ -674,6 +684,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "caption": caption,
             "parse_mode": parse_mode,
             "caption_entities": caption_entities,
@@ -701,6 +712,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         duration: int | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -737,6 +749,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "duration": duration,
             "width": width,
             "height": height,
@@ -770,6 +783,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         duration: int | None = None,
         width: int | None = None,
         height: int | None = None,
@@ -803,6 +817,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "duration": duration,
             "width": width,
             "height": height,
@@ -834,6 +849,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -862,6 +878,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "caption": caption,
             "parse_mode": parse_mode,
             "caption_entities": caption_entities,
@@ -887,6 +904,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         duration: int | None = None,
         length: int | None = None,
         thumbnail: str | InputFile | None = None,
@@ -914,6 +932,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "duration": duration,
             "length": length,
             "disable_notification": disable_notification,
@@ -1029,6 +1048,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         horizontal_accuracy: float | None = None,
         live_period: int | None = None,
         heading: int | None = None,
@@ -1056,6 +1076,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "latitude": latitude,
             "longitude": longitude,
             "horizontal_accuracy": horizontal_accuracy,
@@ -1083,6 +1104,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         foursquare_id: str | None = None,
         foursquare_type: str | None = None,
         google_place_id: str | None = None,
@@ -1112,6 +1134,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "latitude": latitude,
             "longitude": longitude,
             "title": title,
@@ -1139,6 +1162,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         last_name: str | None = None,
         vcard: str | None = None,
         disable_notification: bool | None = None,
@@ -1164,6 +1188,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "phone_number": phone_number,
             "first_name": first_name,
             "last_name": last_name,
@@ -1348,6 +1373,8 @@ class Telegram:
         message_thread_id: int | None = None,
         parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
+        can_stop: bool | None = None,
+        keep_on_stop: bool | None = None,
     ) -> bool:
         """
         Use this method to stream a partial message to a user while the message is being generated;
@@ -1369,6 +1396,8 @@ class Telegram:
             "message_thread_id": message_thread_id,
             "parse_mode": parse_mode,
             "entities": entities,
+            "can_stop": can_stop,
+            "keep_on_stop": keep_on_stop,
         }
         response = self._make_request("sendMessageDraft", method="POST", data=payload)
         return bool(response)
@@ -1622,6 +1651,7 @@ class Telegram:
         can_manage_topics: bool | None = None,
         can_manage_direct_messages: bool | None = None,
         can_manage_tags: bool | None = None,
+        can_send_welcome_messages: bool | None = None,
     ) -> bool:
         """
         Promote or demote a user in a supergroup or channel.
@@ -1654,6 +1684,7 @@ class Telegram:
             "can_manage_topics": can_manage_topics,
             "can_manage_direct_messages": can_manage_direct_messages,
             "can_manage_tags": can_manage_tags,
+            "can_send_welcome_messages": can_send_welcome_messages,
         }
         response = self._make_request("promoteChatMember", method="POST", data=payload)
         return bool(response)
@@ -3938,7 +3969,6 @@ class Telegram:
             chat_id: Unique identifier for the target chat or username of the target supergroup.
             receiver_user_id: Identifier of the user who received the message.
             ephemeral_message_id: Identifier of the ephemeral message to edit.
-            rich_message
 
             See full parameters here: [editEphemeralMessageText](https://core.telegram.org/bots/api#editephemeralmessagetext)
 
@@ -3979,7 +4009,6 @@ class Telegram:
             chat_id: Unique identifier for the target chat or username of the target supergroup.
             receiver_user_id: Identifier of the user who received the message.
             ephemeral_message_id: Identifier of the ephemeral message to edit.
-            rich_message
 
             See full parameters here: [editEphemeralMessageMedia](https://core.telegram.org/bots/api#editephemeralmessagemedia)
 
@@ -4017,7 +4046,6 @@ class Telegram:
             chat_id: Unique identifier for the target chat or username of the target supergroup.
             receiver_user_id: Identifier of the user who received the message.
             ephemeral_message_id: Identifier of the ephemeral message to edit.
-            rich_message
 
             See full parameters here: [editEphemeralMessageCaption](https://core.telegram.org/bots/api#editephemeralmessagecaption)
 
@@ -4054,7 +4082,6 @@ class Telegram:
             chat_id: Unique identifier for the target chat or username of the target supergroup.
             receiver_user_id: Identifier of the user who received the message.
             ephemeral_message_id: Identifier of the ephemeral message to edit.
-            rich_message
 
         Note:
             That it is not guaranteed that the user will receive the message edit event, especially if they are offline
@@ -4232,6 +4259,7 @@ class Telegram:
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         emoji: str | None = None,
         disable_notification: bool | None = None,
         protect_content: bool | None = None,
@@ -4261,6 +4289,7 @@ class Telegram:
             "business_connection_id": business_connection_id,
             "message_thread_id": message_thread_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "emoji": emoji,
             "disable_notification": disable_notification,
             "protect_content": protect_content,
@@ -4597,6 +4626,7 @@ class Telegram:
         message_thread_id: int | None = None,
         business_connection_id: str | None = None,
         direct_messages_topic_id: int | None = None,
+        ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         disable_notification: bool | None = None,
         protect_content: bool | None = None,
         allow_paid_broadcast: bool | None = None,
@@ -4621,6 +4651,7 @@ class Telegram:
             "message_thread_id": message_thread_id,
             "business_connection_id": business_connection_id,
             "direct_messages_topic_id": direct_messages_topic_id,
+            "ephemeral_message_parameters": ephemeral_message_parameters,
             "disable_notification": disable_notification,
             "protect_content": protect_content,
             "allow_paid_broadcast": allow_paid_broadcast,
@@ -4638,6 +4669,8 @@ class Telegram:
         draft_id: int,
         rich_message: InputRichMessage,
         message_thread_id: int | None = None,
+        can_stop: bool | None = None,
+        keep_on_stop: bool | None = None,
     ):
         """
         Use this method to stream a partial rich message to a user while the message is being generated.
@@ -4656,6 +4689,8 @@ class Telegram:
             "draft_id": draft_id,
             "rich_message": rich_message,
             "message_thread_id": message_thread_id,
+            "can_stop": can_stop,
+            "keep_on_stop": keep_on_stop,
         }
         response = self._make_request(
             "sendRichMessageDraft", method="POST", data=payload
