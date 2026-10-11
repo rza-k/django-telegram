@@ -3919,6 +3919,158 @@ class Telegram:
         response = self._make_request("stopPoll", method="POST", data=payload)
         return Poll.model_validate(response)
 
+    def edit_ephemeral_message_text(
+        self,
+        chat_id: int | str,
+        receiver_user_id: int,
+        ephemeral_message_id: int,
+        text: str | None = None,
+        parse_mode: str | None = "html",
+        entities: List[MessageEntity] | None = None,
+        rich_message: InputRichMessage | None = None,
+        link_preview_options: LinkPreviewOptions | None = None,
+        reply_markup: InlineKeyboardMarkup | None = None,
+    ) -> bool:
+        """
+        Edit an ephemeral text or rich message.
+
+        Args:
+            chat_id: Unique identifier for the target chat or username of the target supergroup.
+            receiver_user_id: Identifier of the user who received the message.
+            ephemeral_message_id: Identifier of the ephemeral message to edit.
+            rich_message
+
+            See full parameters here: [editEphemeralMessageText](https://core.telegram.org/bots/api#editephemeralmessagetext)
+
+        Note:
+            That it is not guaranteed that the user will receive the message edit event, especially if they are offline
+        """
+        if not (rich_message or text):
+            raise ValueError("Either rich_message or text must be provided.")
+
+        payload = {
+            "chat_id": chat_id,
+            "receiver_user_id": receiver_user_id,
+            "ephemeral_message_id": ephemeral_message_id,
+            "text": text,
+            "parse_mode": parse_mode,
+            "entities": entities,
+            "rich_message": rich_message,
+            "link_preview_options": link_preview_options,
+            "reply_markup": reply_markup,
+        }
+        response = self._make_request(
+            "editEphemeralMessageText", method="POST", data=payload
+        )
+        return bool(response)
+
+    def edit_ephemeral_message_media(
+        self,
+        chat_id: int | str,
+        receiver_user_id: int,
+        ephemeral_message_id: int,
+        media: InputMedia,
+        reply_markup: InlineKeyboardMarkup | None = None,
+    ) -> bool:
+        """
+        Edit the media of an ephemeral message.
+
+        Args:
+            chat_id: Unique identifier for the target chat or username of the target supergroup.
+            receiver_user_id: Identifier of the user who received the message.
+            ephemeral_message_id: Identifier of the ephemeral message to edit.
+            rich_message
+
+            See full parameters here: [editEphemeralMessageMedia](https://core.telegram.org/bots/api#editephemeralmessagemedia)
+
+        Note:
+            That it is not guaranteed that the user will receive the message edit event, especially if they are offline
+        """
+        payload = {
+            "chat_id": chat_id,
+            "receiver_user_id": receiver_user_id,
+            "ephemeral_message_id": ephemeral_message_id,
+            "media": media,
+            "reply_markup": reply_markup,
+        }
+        response = self._make_request(
+            "editEphemeralMessageMedia", method="POST", data=payload
+        )
+
+        return bool(response)
+
+    def edit_ephemeral_message_caption(
+        self,
+        chat_id: int | str,
+        receiver_user_id: int,
+        ephemeral_message_id: int,
+        caption: str | None = None,
+        parse_mode: str | None = None,
+        caption_entities: list[MessageEntity] | None = None,
+        show_caption_above_media: bool | None = None,
+        reply_markup: InlineKeyboardMarkup | None = None,
+    ) -> bool:
+        """
+        Edit an ephemeral caption or rich message.
+
+        Args:
+            chat_id: Unique identifier for the target chat or username of the target supergroup.
+            receiver_user_id: Identifier of the user who received the message.
+            ephemeral_message_id: Identifier of the ephemeral message to edit.
+            rich_message
+
+            See full parameters here: [editEphemeralMessageCaption](https://core.telegram.org/bots/api#editephemeralmessagecaption)
+
+        Note:
+            That it is not guaranteed that the user will receive the message edit event, especially if they are offline
+        """
+        payload = {
+            "chat_id": chat_id,
+            "receiver_user_id": receiver_user_id,
+            "ephemeral_message_id": ephemeral_message_id,
+            "caption": caption,
+            "parse_mode": parse_mode,
+            "caption_entities": caption_entities,
+            "show_caption_above_media": show_caption_above_media,
+            "reply_markup": reply_markup,
+        }
+        response = self._make_request(
+            "editEphemeralMessageCaption", method="POST", data=payload
+        )
+
+        return bool(response)
+
+    def edit_ephemeral_message_reply_markup(
+        self,
+        chat_id: int | str,
+        receiver_user_id: int,
+        ephemeral_message_id: int,
+        reply_markup: InlineKeyboardMarkup | None = None,
+    ) -> bool:
+        """
+        Edit only the reply markup of an ephemeral message.
+
+        Args:
+            chat_id: Unique identifier for the target chat or username of the target supergroup.
+            receiver_user_id: Identifier of the user who received the message.
+            ephemeral_message_id: Identifier of the ephemeral message to edit.
+            rich_message
+
+        Note:
+            That it is not guaranteed that the user will receive the message edit event, especially if they are offline
+        """
+        payload = {
+            "chat_id": chat_id,
+            "receiver_user_id": receiver_user_id,
+            "ephemeral_message_id": ephemeral_message_id,
+            "reply_markup": reply_markup,
+        }
+        response = self._make_request(
+            "editEphemeralMessageReplyMarkup", method="POST", data=payload
+        )
+
+        return bool(response)
+
     def approve_suggested_post(
         self, chat_id: int, message_id: int, send_date: int | None = None
     ) -> bool:
@@ -4001,6 +4153,29 @@ class Telegram:
         """
         payload = {"chat_id": chat_id, "message_ids": message_ids}
         response = self._make_request("deleteMessages", method="POST", data=payload)
+        return bool(response)
+
+    def delete_ephemeral_message(
+        self, chat_id: int | str, receiver_user_id: int, ephemeral_message_id: int
+    ) -> bool:
+        """
+        Use this method to delete an ephemeral message.
+        Note:  that it is not guaranteed that the user will receive the message deletion event,
+        especially if they are offline.
+
+        Args:
+            chat_id: Unique identifier for the target chat or username of the target supergroup.
+            receiver_user_id: Identifier of the user who received the message.
+            ephemeral_message_id: Identifier of the ephemeral message to delete.
+        """
+        payload = {
+            "chat_id": chat_id,
+            "receiver_user_id": receiver_user_id,
+            "ephemeral_message_id": ephemeral_message_id,
+        }
+        response = self._make_request(
+            "deleteEphemeralMessage", method="POST", data=payload
+        )
         return bool(response)
 
     def delete_message_reaction(

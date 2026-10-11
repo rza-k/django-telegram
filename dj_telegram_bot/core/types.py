@@ -48,6 +48,7 @@ class Update(_BaseModel):
     chat_boost: ChatBoostUpdated | None = None
     removed_chat_boost: ChatBoostRemoved | None = None
     managed_bot: ManagedBotUpdated | None = None
+    subscription: BotSubscriptionUpdated | None = None
 
 
 class User(_BaseModel):
@@ -135,6 +136,7 @@ class ChatFullInfo(_BaseModel):
     unique_gift_colors: UniqueGiftColors | None = None
     paid_message_star_count: int | None = None
     guard_bot: User | None = None
+    community: Community | None = None
 
 
 class Message(_BaseModel):
@@ -148,6 +150,8 @@ class Message(_BaseModel):
     sender_boost_count: int | None = None
     sender_business_bot: User | None = None
     sender_tag: str | None = None
+    receiver_user: User | None = None
+    ephemeral_message_id: int | None = None
     date: PositiveInt
     guest_query_id: str | None = None
     business_connection_id: str | None = None
@@ -229,6 +233,9 @@ class Message(_BaseModel):
     chat_background_set: ChatBackground | None = None
     checklist_tasks_done: ChecklistTasksDone | None = None
     checklist_tasks_added: ChecklistTasksAdded | None = None
+    community_chat_added: CommunityChatAdded | None = None
+    community_chat_joined: CommunityChatJoined | None = None
+    community_chat_removed: CommunityChatRemoved | None = None
     direct_message_price_changed: DirectMessagePriceChanged | None = None
     forum_topic_created: ForumTopicCreated | None = None
     forum_topic_edited: ForumTopicEdited | None = None
@@ -340,8 +347,9 @@ class ExternalReplyInfo(_BaseModel):
 
 
 class ReplyParameters(_BaseModel):
-    message_id: int
+    message_id: int | None = None
     chat_id: int | str | None = None
+    ephemeral_message_id: int | None = None
     allow_sending_without_reply: bool | None = None
     quote: str | None = None
     quote_parse_mode: str | None = None
@@ -349,6 +357,15 @@ class ReplyParameters(_BaseModel):
     quote_position: int | None = None
     checklist_task_id: int | None = None
     poll_option_id: str | None = None
+
+    @model_validator(mode="after")
+    def _check_reply_target(self):
+        if not (self.message_id or self.ephemeral_message_id):
+            raise ValueError(
+                "Either message_id or ephemeral_message_id must be provided."
+            )
+
+        return self
 
 
 class MessageOriginUser(_BaseModel):
@@ -516,14 +533,37 @@ class InputSticker(_BaseModel):
     keywords: list[str] | None = None
 
 
+class InputMediaVoiceNote(_BaseModel):
+    type: str  # must be voice_note
+    media: str
+    caption: str | None = None
+    parse_mode: str | None = None
+    caption_entities: list[MessageEntity] | None = None
+    duration: int | None = None
+
+
+class InputRichMessageMedia(_BaseModel):
+    id: int
+    media: (
+        InputMediaAnimation
+        | InputMediaAudio
+        | InputMediaDocument
+        | InputMediaPhoto
+        | InputMediaVideo
+        | InputMediaVoiceNote
+    )
+
+
 class RichMessage(_BaseModel):
     blocks: list[RichBlock]
     is_rtl: bool | None = None
 
 
 class InputRichMessage(_BaseModel):
+    blocks: list[InputRichBlock] | None = None
     html: str | None = None
     markdown: str | None = None
+    media: list[InputRichMessageMedia] | None = None
     is_rtl: bool | None = None
     skip_entity_detection: bool | None = None
 
@@ -818,6 +858,151 @@ class RichBlockThinking(_BaseModel):
     text: RichText
 
 
+class InputRichBlockListItem(_BaseModel):
+    blocks: list[InputRichBlock]
+    has_checkbox: bool | None = None
+    is_checked: bool | None = None
+    value: int | None = None
+    type: str | None = None
+
+
+class InputRichBlockParagraph(_BaseModel):
+    type: str = "paragraph"
+    text: RichText
+
+
+class InputRichBlockSectionHeading(_BaseModel):
+    type: str = "heading"
+    text: RichText
+    size: int
+
+
+class InputRichBlockPreformatted(_BaseModel):
+    type: str = "pre"
+    text: RichText
+    language: str | None = None
+
+
+class InputRichBlockFooter(_BaseModel):
+    type: str = "footer"
+    text: RichText
+
+
+class InputRichBlockDivider(_BaseModel):
+    type: str = "divider"
+
+
+class InputRichBlockMathematicalExpression(_BaseModel):
+    type: str = "mathematical_expression"
+    expression: str
+
+
+class InputRichBlockAnchor(_BaseModel):
+    type: str = "anchor"
+    name: str
+
+
+class InputRichBlockList(_BaseModel):
+    type: str = "list"
+    items: list[InputRichBlockListItem]
+
+
+class InputRichBlockBlockQuotation(_BaseModel):
+    type: str = "blockquote"
+    blocks: list[InputRichBlock]
+    credit: RichText | None = None
+
+
+class InputRichBlockExpandableBlockQuotation(_BaseModel):
+    type: str = "expandable_blockquote"
+    text: RichText
+    credit: RichText | None = None
+
+
+class InputRichBlockPullQuotation(_BaseModel):
+    type: str = "pullquote"
+    text: RichText
+    credit: RichText | None = None
+
+
+class InputRichBlockCollage(_BaseModel):
+    type: str = "collage"
+    blocks: list[InputRichBlock]
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockSlideshow(_BaseModel):
+    type: str = "slideshow"
+    blocks: list[InputRichBlock]
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockTable(_BaseModel):
+    type: str = "table"
+    cells: list[list[RichBlockTableCell]]
+    is_bordered: bool | None = None
+    is_striped: bool | None = None
+    is_compact: bool | None = None
+    caption: RichText | None = None
+
+
+class InputRichBlockDetails(_BaseModel):
+    type: str = "details"
+    summary: RichText
+    blocks: list[InputRichBlock]
+    is_open: bool | None = None
+
+
+class InputRichBlockMap(_BaseModel):
+    type: str = "map"
+    location: Location
+    zoom: int | None = None
+    width: int | None = None
+    height: int | None = None
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockAnimation(_BaseModel):
+    type: str = "animation"
+    animation: InputMediaAnimation
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockAudio(_BaseModel):
+    type: str = "audio"
+    audio: InputMediaAudio
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockDocument(_BaseModel):
+    type: str = "document"
+    document: InputMediaDocument
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockPhoto(_BaseModel):
+    type: str = "photo"
+    photo: InputMediaPhoto
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockVideo(_BaseModel):
+    type: str = "video"
+    video: InputMediaVideo
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockVoiceNote(_BaseModel):
+    type: str = "voice_note"
+    voice_note: InputMediaVoiceNote
+    caption: RichBlockCaption | None = None
+
+
+class InputRichBlockThinking(_BaseModel):
+    type: str = "thinking"
+    text: RichText
+
+
 class Voice(_BaseModel):
     file_id: str
     file_unique_id: str
@@ -1022,6 +1207,12 @@ class ManagedBotCreated(_BaseModel):
 class ManagedBotUpdated(_BaseModel):
     user: User
     bot: User
+
+
+class BotSubscriptionUpdated(_BaseModel):
+    user: User
+    invoice_payload: str
+    state: Literal["canceled", "active", "failed"]
 
 
 class PollOptionAdded(_BaseModel):
@@ -1421,6 +1612,23 @@ class ChatPermissions(_BaseModel):
     can_invite_users: bool | None = None
     can_pin_messages: bool | None = None
     can_manage_topics: bool | None = None
+
+
+class Community(_BaseModel):
+    id: int
+    name: str
+
+
+class CommunityChatAdded(_BaseModel):
+    community: Community
+
+
+class CommunityChatJoined(_BaseModel):
+    community: Community
+
+
+class CommunityChatRemoved(_BaseModel):
+    pass
 
 
 class ChatPhoto(_BaseModel):
@@ -2185,6 +2393,7 @@ class AcceptedGiftTypes(_BaseModel):
 class BotCommand(_BaseModel):
     command: str
     description: str
+    is_ephemeral: bool | None = None
 
 
 class BotCommandScopeDefault(_BaseModel):
@@ -3087,6 +3296,32 @@ RichBlock = (
     | RichBlockThinking
 )
 
+InputRichBlock = (
+    InputRichBlockParagraph
+    | InputRichBlockSectionHeading
+    | InputRichBlockPreformatted
+    | InputRichBlockFooter
+    | InputRichBlockDivider
+    | InputRichBlockMathematicalExpression
+    | InputRichBlockAnchor
+    | InputRichBlockList
+    | InputRichBlockBlockQuotation
+    | InputRichBlockExpandableBlockQuotation
+    | InputRichBlockPullQuotation
+    | InputRichBlockCollage
+    | InputRichBlockSlideshow
+    | InputRichBlockTable
+    | InputRichBlockDetails
+    | InputRichBlockMap
+    | InputRichBlockButtons
+    | InputRichBlockAnimation
+    | InputRichBlockAudio
+    | InputRichBlockDocument
+    | InputRichBlockPhoto
+    | InputRichBlockVideo
+    | InputRichBlockVoiceNote
+    | InputRichBlockThinking
+)
 # ─── Type Adapters ─────────────────────────────────────────────
 MessageIdList = TypeAdapter(List[MessageId])
 StickerList = TypeAdapter(List[Sticker])
