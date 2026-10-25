@@ -23,13 +23,13 @@ A typed Telegram Bot API client for Django.
 ## ⚙️ Installation
 
 ```bash
-pip install django_telegram
+pip install django-telegram-bot-api
 ```
 
 or with `uv`:
 
 ```bash
-uv add django_telegram
+uv add django-telegram-bot-api
 ```
 
 ---
