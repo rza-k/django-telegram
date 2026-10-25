@@ -65,7 +65,22 @@ class SponsorGuard:
         )
         return InlineKeyboardMarkup(inline_keyboard=rows)
 
-    def enforce(self, use_cache: bool = True) -> bool:
+    def is_exempt(self) -> bool:
+        """No sponsor check for updates with no real user, or inside groups."""
+        h = self.h
+        if h.update.channel_post:
+            return True
+
+        # inline updates have no real chat: always check them
+        if h.inline_query or h.is_inline_callback():
+            return False
+
+        return h.is_group()
+
+    def ensure_joined(self, use_cache: bool = True) -> bool:
+        if self.is_exempt():
+            return True
+
         not_joined = self.get_not_joined(use_cache)
         if not_joined:
             self.send_prompt(not_joined)
@@ -118,11 +133,13 @@ class SponsorGuard:
             self.h.inline_query.id, [article], cache_time=0, is_personal=True
         )
 
+    enforce = ensure_joined  # backward compatibility
+
 
 def sponsor_required(func):
     @wraps(func)
     def wrapper(self: "BaseHandler", *args, **kwargs):
-        if not SponsorGuard(self).enforce():
+        if not SponsorGuard(self).ensure_joined():
             return False
 
         return func(self, *args, **kwargs)
