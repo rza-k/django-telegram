@@ -93,8 +93,11 @@ class BaseHandler:
 
     @property
     def text(self) -> str:
-        text = self.message.text if self.message and self.message.text else ""
-        return text
+        message = self.message or self.update.channel_post
+        if not message:
+            return ""
+
+        return message.text or message.caption or ""
 
     @property
     def command(self) -> str:
@@ -121,6 +124,9 @@ class BaseHandler:
         if self.update.message:
             return cast(Chat, self.update.message.chat)
 
+        if self.update.channel_post:
+            return self.update.channel_post.chat
+
         return cast(Chat, None)
 
     @property
@@ -137,6 +143,9 @@ class BaseHandler:
 
         if self.inline_query:
             user = self.inline_query.from_user
+
+        if self.update.channel_post:
+            user = self.update.channel_post.sender_chat
 
         return cast(User, user)
 
