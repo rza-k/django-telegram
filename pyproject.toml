@@ -1,0 +1,19 @@
+[project]
+name = "django-telegram"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "reza", email = "rza.karampour@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "django>=6.1.2",
+    "djangorestframework>=3.18.3",
+    "pydantic",
+    "requests>=2.34.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
