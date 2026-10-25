@@ -1,39 +1,35 @@
 # Django Telegram Bot
 
-[![PyPI](https://img.shields.io/pypi/v/dj-telegram-bot)](https://pypi.org/project/dj-telegram-bot/)
-[![Latest on Django Packages](https://img.shields.io/badge/Django_Packages-dj--telegram--bot-8c3c26.svg)](https://djangopackages.org/packages/p/dj-telegram-bot/)
-
 The fastest way to build a production-ready Telegram bot on Django.
-
----
-
-## 🎥 Demo
-
-https://github.com/user-attachments/assets/5307e4c1-4f2a-4c2f-94e7-b05d9fec2788
 
 ---
 ## 🚀 Overview
 
-`dj_telegram_bot` gives you a clean, decorator-based way to handle Telegram updates (commands, messages, callbacks) inside any Django project.
+# django-telegram
+A typed Telegram Bot API client for Django.
 
-- Fully typed with Pydantic — every Telegram API type is modeled, giving you autocomplete and type safety everywhere
-- Dynamic messages and keyboards — create and edit them directly from a custom Django admin UI
-- Built-in `@sponsor_required` decorator — force users to join one or more channels (configured in the django-admin)
-- Update mode — pause the bot and show a custom message (configured in the django-admin)
-- Proxy (SOCKS5) support — for connecting to Telegram's official API (`api.telegram.org`) through a proxy, if needed.
+`django-telegram` gives you every Telegram Bot API method as a plain Python method, and every Telegram type as a [Pydantic](https://docs.pydantic.dev/) model. You call a method, and you get a typed object back instead of a raw dictionary.
+
+## What it does
+
+- **All Bot API methods in one place.** Sending a message, answering a callback query, setting a webhook, and the rest of the API are available as methods on a single `Telegram` client.
+- **All Telegram types included.** Updates, messages, users, chats, keyboards, and every other object defined by Telegram are Pydantic models, so you get validation and editor autocompletion.
+- **Responses are objects.** Access `message.chat.id` or `update.callback_query.data` directly instead of digging through nested dictionaries.
+- **Built for Django.** Configuration is read from your Django settings, and the library fits into your own views and URLs.
+- **Synchronous.** No event loop or async runtime required.
 
 ---
 
 ## ⚙️ Installation
 
 ```bash
-pip install dj_telegram_bot
+pip install django_telegram
 ```
 
 or with `uv`:
 
 ```bash
-uv add dj_telegram_bot
+uv add django_telegram
 ```
 
 ---
@@ -43,168 +39,300 @@ uv add dj_telegram_bot
 Here's the minimal setup to get a bot responding to `/start`.
 
 ### 1. Add the app and configure settings
+### 1. Configure settings
+
+Add a `TELEGRAM` dictionary to your Django settings. You do **not** need to add `django_telegram` to `INSTALLED_APPS`.
 
 ```python
 # settings.py
-INSTALLED_APPS = [
-    ...
-    "dj_telegram_bot.contrib",
-]
-
-BOT_TOKEN = "your-telegram-bot-token"
-TM_WEBHOOK_URL = "https://api.telegram.org"  # or your local Bot API server (TDLib)
+TELEGRAM = {
+    "BOT_TOKEN": "your-telegram-bot-token",
+    "TM_WEBHOOK_URL": "https://api.telegram.org",
+}
 ```
 
-### 2. Provide a User model
+| Key | Required | Default | Description |
+|---|---|---|---|
+| `BOT_TOKEN` | Yes | n/a | Your bot token from [@BotFather](https://t.me/BotFather). |
+| `TM_WEBHOOK_URL` | Yes | n/a | Base URL of the Telegram Bot API. Use `https://api.telegram.org`, or the address of your own local Bot API server. |
+| `PROXY_SOCKS` | No | `""` | SOCKS proxy for outgoing requests, e.g. `127.0.0.1:1080`. |
 
-You must have a user model that inherits from `AbstractUser` and `TelegramUserMixin`, which automatically gives you the `user_id` and `step` fields:
+If a required key is missing, `ImproperlyConfigured` is raised and the message tells you which one.
+
+> [!TIP]
+> Keep secrets out of your repository by reading them from environment variables:
+>
+> ```python
+> import os
+>
+> TELEGRAM = {
+>     "BOT_TOKEN": os.environ["TELEGRAM_BOT_TOKEN"],
+>     "TM_WEBHOOK_URL": os.getenv("TELEGRAM_API_URL", "https://api.telegram.org"),
+> }
+> ```
+
+Once the settings are in place, the client needs no arguments:
 
 ```python
-# your_app/models.py
-from django.contrib.auth.models import AbstractUser
-from dj_telegram_bot.contrib.mixins import TelegramUserMixin
+from django_telegram import Telegram
 
-class User(AbstractUser, TelegramUserMixin):
-    pass
+bot = Telegram()  # reads BOT_TOKEN and TM_WEBHOOK_URL from settings
 ```
 
+You can still pass a token explicitly, for example in tests or when running several bots:
+
 ```python
-# settings.py
-AUTH_USER_MODEL = "your_app.User"
+bot = Telegram(token="123456:ABC-DEF")
 ```
 
-You can add any additional fields you need to this model.
+### 2. Add the webhook URL
 
-### 3. Include the URLs and run migrations
+Create a Django app for your bot (here it is called `bot`):
+
+```bash
+python manage.py startapp bot
+```
+
+Add a view that receives Telegram's updates and passes them to the dispatcher:
 
 ```python
-# urls.py
-from django.urls import path, include
+# bot/views.py
+import logging
+
+from django_telegram import Dispatcher, Update
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .handlers import command_handlers  # noqa: F401  (registers your handler classes)
+
+logger = logging.getLogger(__name__)
+
+
+class TelegramWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request: Request) -> Response:
+        try:
+            update = Update(**request.data)
+            Dispatcher(update).dispatch()
+        except Exception:
+            logger.exception("Error while processing Telegram update")
+
+        # Always answer 200, otherwise Telegram keeps retrying the same update.
+        return Response({"ok": True}, status=status.HTTP_200_OK)
+```
+
+Add the route to the app:
+
+```python
+# bot/urls.py
+from django.urls import path
+
+from .views import TelegramWebhookView
+
+app_name = "bot"
 
 urlpatterns = [
-    ...
-    path("telegram/", include("dj_telegram_bot.contrib.urls")),
+    path("webhook/", TelegramWebhookView.as_view(), name="webhook"),
 ]
 ```
 
-```bash
-python manage.py migrate
+Include it in your project URLs:
+
+```python
+# config/urls.py
+from django.urls import include, path
+
+urlpatterns = [
+    path("bot/", include("bot.urls", namespace="bot")),
+]
 ```
 
-### 4. Set the webhook
+Your webhook is now served at `https://your-domain.com/bot/webhook/`.
 
-Telegram needs to know where to send updates. Call `setWebhook`, pointing it at the `/telegram/webhook/` path from step 3:
+> [!IMPORTANT]
+> **Every app that defines handlers must import them in its view module.**
+>
+> The dispatcher finds your handlers by looking at the subclasses of `CommandHandler`, `MessageHandler`, and the other base classes. A class only exists once the file that defines it has been imported, so if the file is never imported, the dispatcher sees nothing and the update is silently ignored.
+>
+> Importing your handlers at the top of the webhook view (`from .handlers import command_handlers`) guarantees they are loaded as soon as Django loads your URLs, with no extra registration step.
 
-```bash
-# Official Telegram API (api.telegram.org)
-https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://yourdomain.com/telegram/webhook/
+### 3. Write your handlers
 
-# Local Bot API server (TDLib)
-http://127.0.0.1:8081/bot<BOT_TOKEN>/setWebhook?url=http://127.0.0.1:8000/telegram/webhook/
-```
-
-Replace `<BOT_TOKEN>` with your bot token. For the `url` param: if you're using the official Telegram API server, set it to your own public domain; if you're using a local Bot API server (TDLib), set it to your django local ip:port.
-
-### 5. Write a handler
-
-Create a `bot_handlers/` directory inside any of your Django apps — anything you put here is auto-discovered:
+Create a `handlers` package inside your app and add one file per handler type:
 
 ```text
-your_app/
-├── bot_handlers/
-│   └── start.py
+bot/
+├── __init__.py
+├── urls.py
+├── views.py
+└── handlers/
+    ├── __init__.py
+    └── command_handlers.py
+```
+
+Handlers inherit from one of the base classes and implement `handle(self, update)`. Commands (any message that starts with `/`) go to `CommandHandler`:
+
+```python
+# bot/handlers/command_handlers.py
+from django.conf import settings
+from django_telegram import CommandHandler, Telegram, Update
+from django_telegram.telegram_models import KeyboardButton, ReplyKeyboardMarkup
+
+bot = Telegram(token=settings.TELEGRAM["BOT_TOKEN"])
+
+
+class Commands(CommandHandler):
+
+    def handle(self, update: Update):
+        chat_id = update.message.chat.id
+        text = update.message.text
+
+        if text.startswith("/start"):
+            bot.send_message(chat_id=chat_id, text="hello 3>")
+
+        elif text.startswith("/products"):
+            bot.send_message(
+                chat_id=chat_id,
+                text="choices one !",
+                reply_markup=ReplyKeyboardMarkup(
+                    keyboard=[
+                        [
+                            KeyboardButton(text="product 1"),
+                            KeyboardButton(text="product 2"),
+                        ],
+                        [
+                            KeyboardButton(text="product 3"),
+                            KeyboardButton(text="product 4"),
+                        ],
+                    ],
+                    resize_keyboard=True,
+                ),
+            )
+```
+
+The dispatcher does not look at the command name. Every command is delivered to your `CommandHandler` subclass, and you decide what to do for `/start`, `/products`, and so on inside `handle()`.
+
+When your app grows to several handler files, import them all from the package so the view only needs one import:
+
+```python
+# bot/__init__.py
+from . import command_handlers  # noqa: F401
+# from . import message_handlers  # noqa: F401
+# from . import callback_query_handlers  # noqa: F401
+```
+
+### 4. Handle plain messages
+
+Any message that is not a command (no leading `/`) and has no media goes to `MessageHandler`. Create a new file next to your command handlers:
+
+```text
+bot/handlers/
+├── __init__.py
+├── command_handlers.py
+└── message_handlers.py      ← new
+```
+
+In this example, when the user sends `product 1` (the text of the reply keyboard button from the previous step), the bot answers with a message that has an inline button attached:
+
+```python
+# bot/handlers/message_handlers.py
+from django.conf import settings
+from django_telegram import MessageHandler, Telegram, Update
+from django_telegram.telegram_models import InlineKeyboardButton, InlineKeyboardMarkup
+
+bot = Telegram(token=settings.TELEGRAM["BOT_TOKEN"])
+
+
+class MyMessageHandler(MessageHandler):
+
+    def handle(self, update: Update):
+        chat_id = update.message.chat.id
+        text = update.message.text
+
+        if text == "product 1":
+            bot.send_message(
+                chat_id=chat_id,
+                text="product 1",
+                reply_markup=InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(text="product 1", callback_data="pro1"),
+                        ],
+                    ],
+                ),
+            )
+```
+
+The `callback_data` value (`"pro1"`) is what Telegram sends back to your bot when the user presses the button. You will handle it in the next step.
+
+Now register the new file. A handler class only exists once its file has been imported, so add it to `handlers/__init__.py`:
+
+```python
+# bot/handlers/__init__.py
+from . import (
+    command_handlers,  # noqa: F401
+    message_handlers,  # noqa: F401
+)
+```
+
+Send `product 1` to your bot: it replies with a message and an inline button.
+
+### 5. Handle inline button presses (callback queries)
+
+When the user presses an inline button, Telegram sends a callback query instead of a message. These go to `CallbackQueryHandler`. Create another file:
+
+```text
+bot/handlers/
+├── __init__.py
+├── callback_query_handlers.py   ← new
+├── command_handlers.py
+└── message_handlers.py
 ```
 
 ```python
-# your_app/bot_handlers/start.py
-from dj_telegram_bot.core.handlers import CommandHandler
+# bot/handlers/callback_query_handlers.py
+from django.conf import settings
+from django_telegram import CallbackQueryHandler, Telegram, Update
 
-class StartHandler(CommandHandler):
-    @CommandHandler.register("start")
-    def start(self):
-        self.bot.send_message(chat_id=self.chat_id, text="Hello!")
+bot = Telegram(token=settings.TELEGRAM["BOT_TOKEN"])
+
+
+class MyCallbackQueryHandler(CallbackQueryHandler):
+
+    def handle(self, update: Update):
+        callback_data = update.callback_query.data
+
+        if callback_data == "pro1":
+            bot.answer_callback_query(
+                callback_query_id=update.callback_query.id,
+                text="hi this is product 1",
+                show_alert=True,
+            )
 ```
 
-That's it — your bot now replies to `/start`. Keep reading for the full setup.
+`answer_callback_query` is required for every callback query: it stops the loading spinner on the button. With `show_alert=True` the text is shown as a pop-up alert instead of a small toast.
 
----
-
-## 🛠 Full Setup
-
-### Settings reference
-
-| Setting          | Required | Description                                                                                      |
-| ---------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `BOT_TOKEN`      | Yes      | Bot token obtained from BotFather.                                                               |
-| `TM_WEBHOOK_URL` | Yes      | Base URL for the Telegram Bot API — use `https://api.telegram.org` or your local Bot API server. |
-| `PROXY_SOCKS`    | No       | SOCKS5 proxy address (`IP:PORT`) for connecting to Telegram.                                     |
-
-### Where to put your handlers
-
-The standard, recommended way is the `bot_handlers/` directory shown in Quick Start.
-If you'd rather keep your handlers somewhere else (e.g. inside an existing `views.py`), that's fine too — but that module needs to be imported manually somewhere Django will load it, otherwise the decorators inside it never run. The cleanest place to do this is your app's `apps.py`:
+Register the file the same way:
 
 ```python
-# your_app/apps.py
-from django.apps import AppConfig
-
-class YourAppConfig(AppConfig):
-    name = "your_app"
-
-    def ready(self):
-        from . import views  # wherever your handlers live
+# bot/handlers/__init__.py
+from . import (
+    callback_query_handlers,  # noqa: F401
+    command_handlers,  # noqa: F401
+    message_handlers,  # noqa: F401
+)
 ```
 
----
+### Summary
 
-## 📝 Usage
+| User action | Update type | Base class | Example file |
+|---|---|---|---|
+| Sends `/start` | command | `CommandHandler` | `command_handlers.py` |
+| Sends `product 1` | text message | `MessageHandler` | `message_handlers.py` |
+| Presses an inline button | callback query | `CallbackQueryHandler` | `callback_query_handlers.py` |
 
-<details>
-<summary><strong>Messages & keyboards managed from the admin</strong></summary>
-
-Instead of hardcoding text and keyboards, define them in the Django admin (**Messages** section) and fetch them by step. First create a `Message` in the admin with a `step` value (e.g. `"home"`), then reference it in your handler:
-
-```python
-from dj_telegram_bot.core.handlers import CommandHandler
-from dj_telegram_bot.core.keyboard import KeyboardBuilder
-from dj_telegram_bot.contrib.services import MessageService
-
-class HomeHandler(CommandHandler):
-    @CommandHandler.register("start")
-    def start(self):
-        msg = MessageService.get_msg_by_step("home")
-        markup = KeyboardBuilder(msg).build()
-        self.bot.send_message(chat_id=self.chat_id, text=msg.text, reply_markup=markup)
-```
-
-Each `Message` can have an associated `Keyboard` (reply or inline), with fully configurable `Button` rows/columns/data — all editable from the admin panel.
-
-</details>
-
-<details>
-<summary><strong>Requiring channel membership before access</strong></summary>
-
-Use the `@sponsor_required` decorator to require users to join specific channels before a handler runs. Channels are configured via the **ChannelSponsor** model in the admin panel.
-
-```python
-from dj_telegram_bot.core.handlers import CommandHandler
-from dj_telegram_bot.contrib.decorators import sponsor_required
-
-class GatedHandler(CommandHandler):
-    @CommandHandler.register("start")
-    @sponsor_required
-    def start(self):
-        ...
-```
-
-If the user hasn't joined the required channels, they'll automatically receive a prompt with join links and a confirmation button — your handler only runs after they've joined.
-
-</details>
-
-<details>
-
-<summary><strong>Bot maintenance mode</strong></summary>
-
-Set `BotUpdateStatus.is_update` to `True` (via the admin panel or `BotStatusService.set_updating(True)`) to pause all update processing — useful during deployments or maintenance.
-
-</details>
+Each new handler file needs one line in `handlers/__init__.py`. Your webhook view only needs `from . import handlers`.
