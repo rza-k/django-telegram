@@ -255,7 +255,7 @@ class Telegram:
         ephemeral_message_parameters: EphemeralMessageParameters | None = None,
         parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
-        link_preview_options: LinkPreviewOptions | None = None,
+        link_preview_options: LinkPreviewOptions | None = LinkPreviewOptions(),
         disable_notification: bool | None = None,
         protect_content: bool | None = None,
         allow_paid_broadcast: bool | None = None,
@@ -1293,9 +1293,9 @@ class Telegram:
 
     def send_checklist(
         self,
-        business_connection_id: str,
         chat_id: int,
         checklist: InputChecklist,
+        business_connection_id: str,
         disable_notification: bool | None = None,
         protect_content: bool | None = None,
         message_effect_id: str | None = None,
@@ -3073,8 +3073,8 @@ class Telegram:
 
     def set_business_account_name(
         self,
-        business_connection_id: str,
         first_name: str,
+        business_connection_id: str,
         last_name: str | None = None,
     ) -> bool:
         """
@@ -3138,8 +3138,8 @@ class Telegram:
 
     def set_business_account_profile_photo(
         self,
-        business_connection_id: str,
         photo: InputProfilePhoto,
+        business_connection_id: str,
         is_public: bool | None = None,
     ) -> bool:
         """
@@ -3189,9 +3189,9 @@ class Telegram:
 
     def set_business_account_gift_settings(
         self,
-        business_connection_id: str,
         show_gift_button: bool,
         accepted_gift_types: AcceptedGiftTypes,
+        business_connection_id: str,
     ) -> bool:
         """
         Change the privacy settings for incoming gifts in a managed business account.
@@ -3378,8 +3378,8 @@ class Telegram:
 
     def upgrade_gift(
         self,
-        business_connection_id: str,
         owned_gift_id: str,
+        business_connection_id: str,
         keep_original_details: bool | None = None,
         star_count: int | None = None,
     ) -> bool:
@@ -3405,9 +3405,9 @@ class Telegram:
 
     def transfer_gift(
         self,
-        business_connection_id: str,
         owned_gift_id: str,
         new_owner_chat_id: int,
+        business_connection_id: str,
         star_count: int | None = None,
     ) -> bool:
         """
@@ -3434,9 +3434,9 @@ class Telegram:
 
     def post_story(
         self,
-        business_connection_id: str,
         content: InputStoryContent,
         active_period: int,
+        business_connection_id: str,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -3472,10 +3472,10 @@ class Telegram:
 
     def repost_story(
         self,
-        business_connection_id: str,
         from_chat_id: int,
         from_story_id: int,
         active_period: int,
+        business_connection_id: str,
         post_to_chat_page: bool | None = None,
         protect_content: bool | None = None,
     ) -> Story:
@@ -3505,9 +3505,9 @@ class Telegram:
 
     def edit_story(
         self,
-        business_connection_id: str,
         story_id: int,
         content: InputStoryContent,
+        business_connection_id: str,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -3618,14 +3618,14 @@ class Telegram:
 
     def edit_message_text(
         self,
-        text: str | None = None,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        text: str | None = None,
         inline_message_id: str | None = None,
+        business_connection_id: str | None = None,
         parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
-        link_preview_options: LinkPreviewOptions | None = None,
+        link_preview_options: LinkPreviewOptions | None = LinkPreviewOptions(),
         rich_message: InputRichMessage | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3650,10 +3650,10 @@ class Telegram:
             )
 
         payload = {
-            "business_connection_id": business_connection_id,
             "chat_id": chat_id,
             "message_id": message_id,
             "inline_message_id": inline_message_id,
+            "business_connection_id": business_connection_id,
             "text": text,
             "parse_mode": parse_mode,
             "entities": entities,
@@ -3669,10 +3669,10 @@ class Telegram:
 
     def edit_message_caption(
         self,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
         inline_message_id: str | None = None,
+        business_connection_id: str | None = None,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -3700,8 +3700,8 @@ class Telegram:
             )
 
         payload = {
-            "business_connection_id": business_connection_id,
             "chat_id": chat_id,
+            "business_connection_id": business_connection_id,
             "message_id": message_id,
             "inline_message_id": inline_message_id,
             "caption": caption,
@@ -3719,9 +3719,9 @@ class Telegram:
     def edit_message_media(
         self,
         media: InputMedia,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        business_connection_id: str | None = None,
         inline_message_id: str | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3764,9 +3764,9 @@ class Telegram:
         self,
         latitude: float,
         longitude: float,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        business_connection_id: str | None = None,
         inline_message_id: str | None = None,
         live_period: int | None = None,
         horizontal_accuracy: float | None = None,
@@ -3817,9 +3817,9 @@ class Telegram:
 
     def stop_message_live_location(
         self,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        business_connection_id: str | None = None,
         inline_message_id: str | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3855,9 +3855,9 @@ class Telegram:
 
     def edit_message_checklist(
         self,
-        business_connection_id: str,
         chat_id: int,
         message_id: int,
+        business_connection_id: str,
         checklist: InputChecklist,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3888,11 +3888,11 @@ class Telegram:
 
     def edit_message_reply_markup(
         self,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
         inline_message_id: str | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
+        business_connection_id: str | None = None,
     ) -> Message | bool:
         """
         Edit only the reply markup (inline keyboard) of a message.
@@ -3959,7 +3959,7 @@ class Telegram:
         parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
         rich_message: InputRichMessage | None = None,
-        link_preview_options: LinkPreviewOptions | None = None,
+        link_preview_options: LinkPreviewOptions | None = LinkPreviewOptions(),
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> bool:
         """

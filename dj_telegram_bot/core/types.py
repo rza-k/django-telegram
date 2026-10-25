@@ -1494,7 +1494,7 @@ class GiveawayCompleted(_BaseModel):
 
 
 class LinkPreviewOptions(_BaseModel):
-    is_disabled: bool | None = None
+    is_disabled: bool | None = True
     url: str | None = None
     prefer_small_media: bool | None = None
     prefer_large_media: bool | None = None
