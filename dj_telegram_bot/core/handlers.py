@@ -10,6 +10,7 @@ from django.utils.functional import cached_property
 from dj_telegram_bot.contrib.mixins import TelegramUserMixin
 
 # Re-exported for backward compatibility
+from dj_telegram_bot.contrib.services import BotStatusService, MessageService
 from dj_telegram_bot.core.routing import (  # noqa: F401
     Route,
     Router,
@@ -257,19 +258,19 @@ class BaseHandler:
         return rsp.status != "left"
 
     def _execute(self, route: Route) -> Any:
-        if not route.is_method:
+        owner, name = route.owner, route.name
+        if owner is None or name is None:  # is plain function
             return route.func(self)
 
-        if isinstance(self, route.owner):
+        if isinstance(self, owner):
             inst = self
-
         else:
-            inst = route.owner(self.update, self.bot)
+            inst = owner(self.update, self.bot)
             # reuse the already-fetched DB user instead of querying again
             if "_db_user" in self.__dict__:
                 inst.__dict__["_db_user"] = self.__dict__["_db_user"]
 
-        return getattr(inst, route.name)()
+        return getattr(inst, name)()
 
     def handle(self) -> bool:
         self._db_user  # load/create the user before any before_handler runs

@@ -57,10 +57,6 @@ class Route:
         object.__setattr__(self, "wildcard", wildcard)
 
     @property
-    def is_method(self) -> bool:
-        return self.owner is not None
-
-    @property
     def specificity(self) -> tuple[int, int]:
         """Sort key for wildcards: explicit priority first, then literal length."""
         return self.priority, len(self.wildcard[1]) if self.wildcard else 0
