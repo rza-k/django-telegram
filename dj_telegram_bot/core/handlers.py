@@ -12,6 +12,8 @@ from dj_telegram_bot.contrib.services import BotStatusService, MessageService
 from dj_telegram_bot.core.routing import (  # noqa: F401
     Route,
     Router,
+    before_handler,
+    before_handlers,
     callback_handler,
     callback_step_handler,
     chosen_handler,
@@ -229,7 +231,7 @@ class BaseHandler:
         return getattr(inst, route.name)()
 
     def handle(self) -> bool:
-        if self.is_update_mode() or self.is_user_block():
+        if any(check(self) for check in before_handlers):
             return True
 
         if not self.handler_type or not self.key_attribute:

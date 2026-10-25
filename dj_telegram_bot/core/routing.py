@@ -268,3 +268,13 @@ chosen_handler = make_decorator("chosen")
 # match on the user's step instead of the incoming text/data
 message_step_handler = make_decorator("message", step=True)
 callback_step_handler = make_decorator("callback", step=True)
+
+
+# checks that run before every handler
+before_handlers: list[Callable[..., Any]] = []
+
+
+def before_handler(func):
+    """Run before every handler; return True to stop and skip the handler."""
+    before_handlers.append(func)
+    return func
