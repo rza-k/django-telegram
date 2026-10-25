@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any, ClassVar, cast
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import make_password
+from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.utils.functional import cached_property
 
-from dj_telegram_bot.contrib.services import BotStatusService, MessageService
+from dj_telegram_bot.contrib.mixins import TelegramUserMixin
 
 # Re-exported for backward compatibility
 from dj_telegram_bot.core.routing import (  # noqa: F401
@@ -33,7 +34,22 @@ from dj_telegram_bot.core.types import (
     User,
 )
 
-UserDB = get_user_model()
+
+@lru_cache()
+def user_model_supported(model) -> bool:
+    """True if the model uses the mixin, or has real `user_id` and `step` fields."""
+
+    if issubclass(model, TelegramUserMixin):
+        return True
+
+    for name in ("user_id", "step"):
+        try:
+            if model._meta.get_field(name).is_relation:
+                return False
+        except FieldDoesNotExist:
+            return False
+
+    return True
 
 
 class BaseHandler:
@@ -138,30 +154,46 @@ class BaseHandler:
         return cq.inline_message_id if cq else None
 
     @cached_property
-    def user_obj(self) -> UserDB:
-        if not self.user:
-            return cast(UserDB, None)
+    def _db_user(self):
+        """Internal: the DB user, or None (no user in the update, or unsupported model)."""
+        user = self.user
+        model = get_user_model()
+        if not user or not user_model_supported(model):
+            return None
 
         if not self.is_private():
             try:
                 self.bot.send_chat_action(self.chat_id, "typing")
             except Exception:
-                return cast(UserDB, None)
+                return None
 
-        user, _ = UserDB.objects.get_or_create(
-            user_id=self.user_id,
-            defaults={
-                "username": self.user.username or str(self.user_id),
-                "password": make_password(str(self.user_id)),
-                "first_name": self.user.first_name,
-                "last_name": self.user.last_name or str(self.user_id),
-            },
-        )
+        if not issubclass(model, TelegramUserMixin):
+            return model.objects.filter(user_id=user.id).first()  # read only
+
+        return model.get_or_create_telegram_user(user)
+
+    @property
+    def user_obj(self):
+        if not user_model_supported(get_user_model()):
+            raise ImproperlyConfigured(
+                "user_obj needs `user_id` and `step` fields on your AUTH_USER_MODEL. "
+                "Inherit from `TelegramUserMixin` or add them yourself."
+            )
+
+        user = self._db_user
+        if user is None:
+            raise LookupError("No database user found for this update.")
+
         return user
+
+    def set_step(self, step: str) -> None:
+        user = self.user_obj
+        user.step = step
+        user.save(update_fields=["step"])
 
     @property
     def user_step(self) -> str:
-        return self.user_obj.step if self.user_obj else ""
+        return self._db_user.step if self._db_user else ""
 
     def is_private(self) -> bool:
         if self.is_inline_callback():
@@ -183,7 +215,7 @@ class BaseHandler:
         return False
 
     def is_update_mode(self):
-        if self.user_obj and self.user_obj.is_superuser:
+        if self._db_user and self._db_user.is_superuser:
             return False
 
         status = BotStatusService.get_status()
@@ -194,7 +226,7 @@ class BaseHandler:
         return False
 
     def is_user_block(self):
-        if self.user_obj and not self.user_obj.is_active:
+        if self._db_user and not self._db_user.is_active:
             default_msg = "شما در ربات بلاک شده اید"
             msg = MessageService.get_msg_by_step("block")
             self.bot.send_message(self.chat_id, text=msg.text if msg else default_msg)
@@ -225,12 +257,14 @@ class BaseHandler:
         else:
             inst = route.owner(self.update, self.bot)
             # reuse the already-fetched DB user instead of querying again
-            if "user_obj" in self.__dict__:
-                inst.__dict__["user_obj"] = self.__dict__["user_obj"]
+            if "_db_user" in self.__dict__:
+                inst.__dict__["_db_user"] = self.__dict__["_db_user"]
 
         return getattr(inst, route.name)()
 
     def handle(self) -> bool:
+        self._db_user  # load/create the user before any before_handler runs
+
         if any(check(self) for check in before_handlers):
             return True
 

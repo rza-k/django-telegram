@@ -10,7 +10,6 @@ class ContribConfig(AppConfig):
     name = "dj_telegram_bot.contrib"
 
     def ready(self):
-        self._validate_user_model()
         self._autodiscover_handlers()
 
     @staticmethod
@@ -40,25 +39,3 @@ class ContribConfig(AppConfig):
                     logger.error(
                         f"Warning: Could not import handler {module_name}: {e}"
                     )
-
-    @staticmethod
-    def _validate_user_model():
-        from django.contrib.auth import get_user_model
-        from django.core.exceptions import ImproperlyConfigured
-
-        from dj_telegram_bot.contrib.mixins import TelegramUserMixin
-
-        User = get_user_model()
-
-        if not issubclass(User, TelegramUserMixin):
-            raise ImproperlyConfigured(
-                "dj_telegram_bot requires your custom AUTH_USER_MODEL to inherit "
-                "from `TelegramUserMixin`.\n\n"
-                "Example:\n"
-                "    from django.contrib.auth.models import AbstractUser\n"
-                "    from dj_telegram_bot.contrib.mixins import TelegramUserMixin\n\n"
-                "    class User(AbstractUser, TelegramUserMixin):\n"
-                "        pass\n\n"
-                "Then in settings.py:\n"
-                "    AUTH_USER_MODEL = 'your_app.User'"
-            )
