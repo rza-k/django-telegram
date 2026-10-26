@@ -1,6 +1,6 @@
 [project]
 name = "django-telegram-bot-api"
-version = "0.1.1"
+version = "0.1.2"
 description = "A typed Telegram Bot API client for Django"
 readme = "README.md"
 authors = [
