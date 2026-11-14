@@ -77,7 +77,7 @@ class User(_BaseModel):
 
 class Chat(_BaseModel):
     id: int
-    type: str
+    type: Literal["private", "group", "supergroup", "channel"]
     title: str | None = None
     username: str | None = None
     first_name: str | None = None
@@ -88,7 +88,7 @@ class Chat(_BaseModel):
 
 class ChatFullInfo(_BaseModel):
     id: int
-    type: str
+    type: Literal["private", "group", "supergroup", "channel"]
     title: str | None = None
     username: str | None = None
     first_name: str | None = None
@@ -551,7 +551,7 @@ class File(_BaseModel):
 class Sticker(_BaseModel):
     file_id: str
     file_unique_id: str
-    type: str  # regular | mask | custom_emoji
+    type: Literal["regular", "mask", "custom_emoji"]
     width: int
     height: int
     is_animated: bool
@@ -569,7 +569,7 @@ class Sticker(_BaseModel):
 class StickerSet(_BaseModel):
     name: str
     title: str
-    sticker_type: str  # "regular", "mask", "custom_emoji"
+    sticker_type: Literal["regular", "mask", "custom_emoji"]
     stickers: List[Sticker]
     thumbnail: PhotoSize | None = None
 
@@ -1242,7 +1242,7 @@ class Poll(_BaseModel):
     total_voter_count: int
     is_closed: bool
     is_anonymous: bool
-    type: str
+    type: Literal["regular", "quiz"]
     allows_multiple_answers: bool
     members_only: bool
     country_codes: list[str] | None = None
@@ -1909,7 +1909,9 @@ class InlineQuery(_BaseModel):
     from_user: User = Field(..., alias="from")
     query: str
     offset: str
-    chat_type: str | None = None
+    chat_type: Literal["sender", "private", "group", "supergroup", "channel"] | None = (
+        None
+    )
     location: Location | None = None
 
 
@@ -2293,6 +2295,7 @@ class WidgetQuery(_BaseModel):
     chat_type: Literal["sender", "private", "group", "supergroup", "channel"] | None = (
         None
     )
+
     widget_id: str | None = None
 
 
@@ -2528,7 +2531,9 @@ class UniqueGiftModel(_BaseModel):
     name: str
     sticker: Sticker
     rarity_per_mille: int
-    rarity: str  # Currently, can be "uncommon", "rare", "epic", or "legendary".
+    rarity: Literal[
+        "uncommon", "rare", "epic", "legendary"
+    ]  # Currently, can be "uncommon", "rare", "epic", or "legendary".
 
 
 class UniqueGiftSymbol(_BaseModel):
@@ -3126,7 +3131,13 @@ class AffiliateInfo(_BaseModel):
 
 class TransactionPartnerUser(_BaseModel):
     type: Literal["user"] = "user"
-    transaction_type: str  # "invoice_payment", "paid_media_payment", "gift_purchase", "premium_purchase", "business_account_transfer"
+    transaction_type: Literal[
+        "invoice_payment",
+        "paid_media_payment",
+        "gift_purchase",
+        "premium_purchase",
+        "business_account_transfer",
+    ]
     user: User
     affiliate: AffiliateInfo | None = None
     invoice_payload: str | None = None
@@ -3192,7 +3203,7 @@ class SuggestedPostPrice(_BaseModel):
 
 
 class SuggestedPostInfo(_BaseModel):
-    state: str
+    state: Literal["pending", "approved", "declined"]
     price: SuggestedPostPrice | None = None
     send_date: int | None = None
 
