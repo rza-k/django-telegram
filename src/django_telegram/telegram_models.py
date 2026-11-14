@@ -37,6 +37,8 @@ class Update(_BaseModel):
     inline_query: InlineQuery | None = None
     chosen_inline_result: ChosenInlineResult | None = None
     callback_query: CallbackQuery | None = None
+    widget_query: WidgetQuery | None = None
+    shared_widget_query: SharedWidgetQuery | None = None
     shipping_query: ShippingQuery | None = None
     pre_checkout_query: PreCheckoutQuery | None = None
     purchased_paid_media: PaidMediaPurchased | None = None
@@ -138,6 +140,8 @@ class ChatFullInfo(_BaseModel):
     paid_message_star_count: int | None = None
     guard_bot: User | None = None
     community: Community | None = None
+    ton_wallet_card: TonWalletCard | None = None
+    share_theme: ChatShareTheme | None = None
 
 
 class Message(_BaseModel):
@@ -193,6 +197,7 @@ class Message(_BaseModel):
     video: Video | None = None
     video_note: VideoNote | None = None
     voice: Voice | None = None
+    widget: Widget | None = None
     caption: str | None = None
     caption_entities: List[MessageEntity] | None = None
     show_caption_above_media: bool | None = None
@@ -250,6 +255,7 @@ class Message(_BaseModel):
     giveaway_completed: GiveawayCompleted | None = None
     managed_bot_created: ManagedBotCreated | None = None
     paid_message_price_changed: PaidMessagePriceChanged | None = None
+    paid_messages_waived: PaidMessagesWaived | None = None
     poll_option_added: PollOptionAdded | None = None
     poll_option_deleted: PollOptionDeleted | None = None
     suggested_post_approved: SuggestedPostApproved | None = None
@@ -257,6 +263,7 @@ class Message(_BaseModel):
     suggested_post_declined: SuggestedPostDeclined | None = None
     suggested_post_paid: SuggestedPostPaid | None = None
     suggested_post_refunded: SuggestedPostRefunded | None = None
+    ton_wallet_transfer: TonWalletTransfer | None = None
     video_chat_scheduled: VideoChatScheduled | None = None
     video_chat_started: VideoChatStarted | None = None
     video_chat_ended: VideoChatEnded | None = None
@@ -301,7 +308,30 @@ class InaccessibleMessage(_BaseModel):
 
 
 class MessageEntity(_BaseModel):
-    type: str
+    type: Literal[
+        "mention",
+        "hashtag",
+        "cashtag",
+        "bot_command",
+        "url",
+        "email",
+        "phone_number",
+        "bank_card_number",
+        "ton_address",
+        "bold",
+        "italic",
+        "underline",
+        "strikethrough",
+        "spoiler",
+        "blockquote",
+        "expandable_blockquote",
+        "code",
+        "pre",
+        "text_link",
+        "text_mention",
+        "custom_emoji",
+        "date_time",
+    ]
     offset: int
     length: int
     url: str | None = None
@@ -314,6 +344,7 @@ class MessageEntity(_BaseModel):
 class TextQuote(_BaseModel):
     text: str
     entities: List[MessageEntity] | None = None
+    rich_texts: List[RichText] | None = None
     position: int
     is_manual: bool
 
@@ -334,6 +365,7 @@ class ExternalReplyInfo(_BaseModel):
     video: Video | None = None
     video_note: VideoNote | None = None
     voice: Voice | None = None
+    widget: Widget | None = None
     has_media_spoiler: bool | None = None
     checklist: Checklist | None = None
     contact: Contact | None = None
@@ -355,6 +387,7 @@ class ReplyParameters(_BaseModel):
     quote: str | None = None
     quote_parse_mode: str | None = None
     quote_entities: List[MessageEntity] | None = None
+    quote_rich_texts: List[RichText] | None = None
     quote_position: int | None = None
     checklist_task_id: int | None = None
     poll_option_id: str | None = None
@@ -370,9 +403,18 @@ class ReplyParameters(_BaseModel):
 
 
 class EphemeralMessageParameters(_BaseModel):
-    receiver_user_id: int
+    receiver_user_id: int | None = None
     callback_query_id: str | None = None
     replace_callback_query_message: bool | None = None
+
+    @model_validator(mode="after")
+    def _check_target(self):
+        if self.receiver_user_id is None and self.callback_query_id is None:
+            raise ValueError(
+                "Either receiver_user_id or callback_query_id must be specified"
+            )
+
+        return self
 
 
 class MessageOriginUser(_BaseModel):
@@ -706,6 +748,12 @@ class RichTextPhoneNumber(_BaseModel):
 
 class RichTextBankCardNumber(_BaseModel):
     type: str = "bank_card_number"
+    text: RichText
+    bank_card_number: str
+
+
+class RichTextTonAddress(_BaseModel):
+    type: str = "ton_address"
     text: RichText
     bank_card_number: str
 
@@ -1088,6 +1136,15 @@ class Voice(_BaseModel):
     duration: int
     mime_type: str | None = None
     file_size: int | None = None
+
+
+class Widget(_BaseModel):
+    id: str | None = None
+    width: int | None = None
+    hight: int | None = None
+    html: str | None = None
+    public_data: str | None = None
+    chat_data: int | None = None
 
 
 class PaidMedia(_BaseModel):
@@ -1494,7 +1551,7 @@ class GiveawayCompleted(_BaseModel):
 
 
 class LinkPreviewOptions(_BaseModel):
-    is_disabled: bool | None = None
+    is_disabled: bool | None = True
     url: str | None = None
     prefer_small_media: bool | None = None
     prefer_large_media: bool | None = None
@@ -2200,6 +2257,53 @@ class CallbackQuery(_BaseModel):
     game_short_name: str | None = None
 
 
+class WidgetQueryTypeData(_BaseModel):
+    type: str = "data"
+    wallet_card: TonWalletCard | None
+
+
+class WidgetQueryTypeSignData(_BaseModel):
+    type: str = "sign_data"
+    wallet: WidgetQueryWallet
+    sign_data: str
+
+
+class WidgetQueryTypeSentTransaction(_BaseModel):
+    type: str = "sent_transaction"
+    wallet: WidgetQueryWallet
+    msg_hash: str
+
+
+class WidgetQueryWallet(_BaseModel):
+    address: str
+    amount: str
+    public_key: str | None = None
+    state_init: str | None = None
+
+
+class WidgetQuery(_BaseModel):
+    id: str
+    type: WidgetQueryType
+    data: str
+    chat_instance: str
+    from_user: User = Field(..., alias="from")
+    chat: Chat | None = None
+    message_id: int | None = None
+    inline_message_id: str | None = None
+    chat_type: Literal["sender", "private", "group", "supergroup", "channel"] | None = (
+        None
+    )
+    widget_id: str | None = None
+
+
+class SharedWidgetQuery(_BaseModel):
+    id: str
+    from_user: User = Field(..., alias="from")
+    type: WidgetQueryType
+    data: str
+    widget_id: str
+
+
 class ForceReply(_BaseModel):
     force_reply: bool
     input_field_placeholder: str | None = None
@@ -2240,13 +2344,71 @@ class UserRating(_BaseModel):
     next_level_rating: int | None = None
 
 
-class StoryAreaPosition(_BaseModel):
+class AreaPosition(_BaseModel):
     x_percentage: float
     y_percentage: float
     width_percentage: float
     height_percentage: float
     rotation_angle: float
     corner_radius_percentage: float
+
+
+class TonNft(_BaseModel):
+    address: str
+    index: str
+    name: str
+    description: str
+    collection_address: str
+    attributes: List[TonNftAttribute] | None = None
+    gift: UniqueGift | None = None
+
+
+class TonNftAttribute(_BaseModel):
+    trait_type: str
+    value: str
+
+
+class TonWalletCardSticker(_BaseModel):
+    position: AreaPosition
+    nft: TonNft
+
+
+class TonWalletCard(_BaseModel):
+    address: str
+    amount: str
+    stickers: List[TonWalletCardSticker]
+    background_nft_address: str | None = None
+
+
+class EmojiTypeEmoji(_BaseModel):
+    type: str = "emoji"
+    emoji: str
+
+
+class EmojiTypeCustomEmoji(_BaseModel):
+    type: str = "custom_emoji"
+    custom_emoji_id: str
+
+
+class ChatShareThemeEmoji(_BaseModel):
+    type: str = "emoji"
+    emojis: List[EmojiType]
+    background_backdrop_id: int | None = None
+
+
+class ChatShareThemeUniqueGift(_BaseModel):
+    type: str = "unique_gift"
+    gift: UniqueGift
+
+
+class ChatShareThemeBackdrops(_BaseModel):
+    id: int
+    name: str
+    colors: UniqueGiftBackdropColors
+
+
+class ChatShareThemeBackdrop(_BaseModel):
+    backdrops: List[ChatShareThemeBackdrop]
 
 
 class LocationAddress(_BaseModel):
@@ -2307,7 +2469,7 @@ class StoryAreaTypeUniqueGift(_BaseModel):
 
 
 class StoryArea(_BaseModel):
-    position: StoryAreaPosition
+    position: AreaPosition
     type: StoryAreaType
 
 
@@ -3068,6 +3230,17 @@ class SuggestedPostRefunded(_BaseModel):
     reason: str
 
 
+class PaidMessagesWaived(_BaseModel):
+    pass
+
+
+class TonWalletTransfer(_BaseModel):
+    transaction_id: str
+    peer_address: str
+    amount: str
+    comment: str | None = None
+
+
 class PassportFile(_BaseModel):
     file_id: str
     file_unique_id: str
@@ -3166,6 +3339,29 @@ class InputInvoiceMessageContent(_BaseModel):
                 "For payments in Telegram Stars (XTR), provider_token must be an empty string."
             )
         return self
+
+
+class InputWidgetMessageContent(_BaseModel):
+    html: str
+    width: int | None = None
+    height: int | None = None
+    public_data: str | None = None
+    chat_data: str | None = None
+    caption: str | None = None
+    parse_mode: str | None = None
+    caption_entities: List[MessageEntity] | None = None
+    show_caption_above_media: bool | None = None
+    allow_queries: bool | None = None
+    is_shared: bool | None = None
+
+
+class InputSharedWidgetMessageContent(_BaseModel):
+    widget_id: str
+    chat_data: str | None = None
+    caption: str | None = None
+    parse_mode: str | None = None
+    caption_entities: List[MessageEntity] | None = None
+    show_caption_above_media: bool | None = None
 
 
 # ─── Discriminated Unions ──────────────────────────────────────
@@ -3359,6 +3555,7 @@ RichText = (
     | RichTextEmailAddress
     | RichTextPhoneNumber
     | RichTextBankCardNumber
+    | RichTextTonAddress
     | RichTextMention
     | RichTextHashtag
     | RichTextCashtag
@@ -3423,6 +3620,14 @@ InputRichBlock = (
     | InputRichBlockVoiceNote
     | InputRichBlockThinking
 )
+
+WidgetQueryType = (
+    WidgetQueryTypeData | WidgetQueryTypeSignData | WidgetQueryTypeSentTransaction
+)
+EmojiType = EmojiTypeEmoji | EmojiTypeCustomEmoji
+
+ChatShareTheme = ChatShareThemeEmoji | ChatShareThemeUniqueGift
+
 # ─── Type Adapters ─────────────────────────────────────────────
 MessageIdList = TypeAdapter(List[MessageId])
 StickerList = TypeAdapter(List[Sticker])

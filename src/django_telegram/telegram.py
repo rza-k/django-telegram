@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from io import BufferedReader
 from typing import Any, Dict, List, cast
@@ -23,6 +24,7 @@ from django_telegram.telegram_models import (
     ChatMember,
     ChatMemberAdapter,
     ChatPermissions,
+    ChatShareThemeBackdrops,
     EphemeralMessageParameters,
     File,
     ForumTopic,
@@ -81,6 +83,26 @@ from django_telegram.telegram_models import (
 
 from .conf import conf
 
+logger = logging.getLogger(__name__)
+
+
+def _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters):
+    if chat_id is not None:
+        return
+
+    if ephemeral_message_parameters is None:
+        raise TypeError(
+            "chat_id is required unless ephemeral_message_parameters is given"
+        )
+
+    if ephemeral_message_parameters.callback_query_id is None:
+        raise TypeError(
+            "without chat_id, ephemeral_message_parameters must include callback_query_id"
+        )
+
+    if ephemeral_message_parameters.receiver_user_id is not None:
+        raise TypeError("without chat_id, receiver_user_id must not be set")
+
 
 class Telegram:
     """
@@ -112,7 +134,6 @@ class Telegram:
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-
         return cls._instance
 
     def _validate_config(self, token, webhook_url):
@@ -144,7 +165,7 @@ class Telegram:
         """
         Send HTTP request to Telegram Bot API.
         """
-        url = self.BASE_URL.format(self.token, method_name)
+        url = f"{self.webhook}/bot{self.token}/{method_name}"
         params = self._clean_dict(params)
         data = self._clean_dict(data)
         response = None
@@ -262,15 +283,15 @@ class Telegram:
 
     def send_message(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         text: str,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
         direct_messages_topic_id: int | None = None,
         ephemeral_message_parameters: EphemeralMessageParameters | None = None,
-        parse_mode: str | None = None,
+        parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
-        link_preview_options: LinkPreviewOptions | None = None,
+        link_preview_options: LinkPreviewOptions | None = LinkPreviewOptions(),
         disable_notification: bool | None = None,
         protect_content: bool | None = None,
         allow_paid_broadcast: bool | None = None,
@@ -287,8 +308,10 @@ class Telegram:
             text: Text of the message to be sent, 1-4096 characters after entities parsing.
             parse_mode: Mode for parsing entities in the message text. ("html" or "MarkdownV2").
 
-            See full parameters here: [sendMessage](https://core.telegram.org/bots/api#sendmessage)
+            See full parameters here: [sendMessage](https://core.telegram.org/bots/api#sendMessage)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "text": text,
@@ -474,7 +497,7 @@ class Telegram:
 
     def send_photo(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         photo: str | InputFile,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -508,6 +531,8 @@ class Telegram:
 
             See full parameters here: [sendPhoto](https://core.telegram.org/bots/api#sendphoto)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -535,7 +560,7 @@ class Telegram:
 
     def send_live_photo(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         live_photo: InputFile | str,
         photo: InputFile | str,
         business_connection_id: str | None = None,
@@ -574,6 +599,8 @@ class Telegram:
 
             See full parameters here: [sendLivePhoto](https://core.telegram.org/bots/api#sendlivephoto)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "business_connection_id": business_connection_id,
             "chat_id": chat_id,
@@ -602,7 +629,7 @@ class Telegram:
 
     def send_audio(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         audio: str | InputFile,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -636,6 +663,8 @@ class Telegram:
 
             See full parameters here: [sendAudio](https://core.telegram.org/bots/api#sendaudio)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -664,7 +693,7 @@ class Telegram:
 
     def send_document(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         document: str | InputFile,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -694,6 +723,8 @@ class Telegram:
 
             See full parameters here: [sendDocument](https://core.telegram.org/bots/api#senddocument)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -722,7 +753,7 @@ class Telegram:
 
     def send_video(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         video: str | InputFile,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -759,6 +790,8 @@ class Telegram:
 
             See full parameters here: [sendVideo](https://core.telegram.org/bots/api#sendvideo)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -793,7 +826,7 @@ class Telegram:
 
     def send_animation(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         animation: str | InputFile,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -827,6 +860,8 @@ class Telegram:
 
             See full parameters here: [sendAnimation](https://core.telegram.org/bots/api#sendanimation)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -859,7 +894,7 @@ class Telegram:
 
     def send_voice(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         voice: str | InputFile,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -888,6 +923,8 @@ class Telegram:
 
             See full parameters here: [sendVoice](https://core.telegram.org/bots/api#sendvoice)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -914,7 +951,7 @@ class Telegram:
 
     def send_video_note(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         video_note: str | InputFile,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -942,6 +979,8 @@ class Telegram:
 
             See full parameters here: [sendVideoNote](https://core.telegram.org/bots/api#sendvideonote)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -964,6 +1003,115 @@ class Telegram:
         response = self._make_request(
             "sendVideoNote", method="POST", data=payload, files=files if files else None
         )
+        return Message.model_validate(response)
+
+    def send_widget(
+        self,
+        chat_id: int | str,
+        html: str,
+        width: int | None = None,
+        height: int | None = None,
+        public_data: str | None = None,
+        chat_data: str | None | None = None,
+        caption: str | None = None,
+        is_shared: bool | None = None,
+        parse_mode: str | None = None,
+        message_thread_id: int | None = None,
+        caption_entities: List[MessageEntity] | None = None,
+        show_caption_above_media: bool | None = None,
+        allow_queries: bool | None = None,
+        disable_notification: bool | None = None,
+        protect_content: bool | None = None,
+        allow_paid_broadcast: bool | None = None,
+        message_effect_id: str | None = None,
+        reply_parameters: ReplyParameters | None = None,
+        reply_markup: ReplyMarkup | None = None,
+    ) -> Message:
+        """
+        send a message with an HTML widget.
+        Currently, in the production environment, widgets can be sent only to private chats,
+         and sent widgets automatically have protected content and therefore can't be forwarded.
+        On success, the sent Message is returned.
+
+        Args:
+            chat_id: Unique identifier for the target chat or username (e.g. @channelusername).
+            html: HTML code of the widget, 1-32768 bytes. The code must not exceed 4096 bytes when compressed by zlib with the maximum compression level.
+            width: Width of the widget in logical pixels; omit if the widget must occupy the whole width of the message bubble. The width is clamped by the app to the range from 200 to the maximum width of the message bubble.
+            height: Height of the widget in logical pixels; omit if the height of the widget isn't fixed. The height is clamped by the app to the range 50-600.
+
+            See full parameters here: [sendVideoNote](https://core.telegram.org/bots/api#sendWidget)
+        """
+        payload = {
+            "chat_id": chat_id,
+            "html": html,
+            "width": width,
+            "height": height,
+            "message_thread_id": message_thread_id,
+            "public_data": public_data,
+            "chat_data": chat_data,
+            "caption": caption,
+            "parse_mode": parse_mode,
+            "caption_entities": caption_entities,
+            "show_caption_above_media": show_caption_above_media,
+            "allow_queries": allow_queries,
+            "is_shared": is_shared,
+            "disable_notification": disable_notification,
+            "protect_content": protect_content,
+            "allow_paid_broadcast": allow_paid_broadcast,
+            "message_effect_id": message_effect_id,
+            "reply_parameters": reply_parameters,
+            "reply_markup": reply_markup,
+        }
+        response = self._make_request("sendWidget", method="POST", data=payload)
+        return Message.model_validate(response)
+
+    def send_shared_widget(
+        self,
+        chat_id: int | str,
+        widget_id: str,
+        chat_data: str | None | None = None,
+        caption: str | None = None,
+        parse_mode: str | None = None,
+        message_thread_id: int | None = None,
+        caption_entities: List[MessageEntity] | None = None,
+        show_caption_above_media: bool | None = None,
+        disable_notification: bool | None = None,
+        protect_content: bool | None = None,
+        allow_paid_broadcast: bool | None = None,
+        message_effect_id: str | None = None,
+        reply_parameters: ReplyParameters | None = None,
+        reply_markup: ReplyMarkup | None = None,
+    ) -> Message:
+        """
+        send again a shared widget created by the bot.
+        Currently, in the production environment, widgets can be sent only to private chats,
+            and sent widgets automatically have protected content and therefore can't be forwarded.
+        On success, the sent Message is returned.
+
+        Args:
+            chat_id: Unique identifier for the target chat or username (e.g. @channelusername).
+            widget_id: Unique identifier of the shared widget
+            chat_data: Data of the widget, which is specific to the message, 0-1024 bytes
+
+            See full parameters here: [sendSharedWidget](https://core.telegram.org/bots/api#sendSharedWidget)
+        """
+        payload = {
+            "chat_id": chat_id,
+            "widget_id": widget_id,
+            "chat_data": chat_data,
+            "caption": caption,
+            "parse_mode": parse_mode,
+            "message_thread_id": message_thread_id,
+            "caption_entities": caption_entities,
+            "show_caption_above_media": show_caption_above_media,
+            "disable_notification": disable_notification,
+            "protect_content": protect_content,
+            "allow_paid_broadcast": allow_paid_broadcast,
+            "message_effect_id": message_effect_id,
+            "reply_parameters": reply_parameters,
+            "reply_markup": reply_markup,
+        }
+        response = self._make_request("sendSharedWidget", method="POST", data=payload)
         return Message.model_validate(response)
 
     def send_paid_media(
@@ -1057,7 +1205,7 @@ class Telegram:
 
     def send_location(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         latitude: float,
         longitude: float,
         business_connection_id: str | None = None,
@@ -1086,6 +1234,8 @@ class Telegram:
 
             See full parameters here: [sendLocation](https://core.telegram.org/bots/api#sendlocation)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -1111,7 +1261,7 @@ class Telegram:
 
     def send_venue(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         latitude: float,
         longitude: float,
         title: str,
@@ -1144,6 +1294,8 @@ class Telegram:
 
             See full parameters here: [sendVenue](https://core.telegram.org/bots/api#sendvenue)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -1171,7 +1323,7 @@ class Telegram:
 
     def send_contact(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         phone_number: str,
         first_name: str,
         business_connection_id: str | None = None,
@@ -1198,6 +1350,8 @@ class Telegram:
 
             See full parameters here: [sendContact](https://core.telegram.org/bots/api#sendcontact)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -1308,9 +1462,9 @@ class Telegram:
 
     def send_checklist(
         self,
-        business_connection_id: str,
         chat_id: int,
         checklist: InputChecklist,
+        business_connection_id: str,
         disable_notification: bool | None = None,
         protect_content: bool | None = None,
         message_effect_id: str | None = None,
@@ -2242,6 +2396,20 @@ class Telegram:
         response = self._make_request("getChatMember", method="GET", params=payload)
         return ChatMemberAdapter.validate_python(response)
 
+    def get_chat_share_theme_backdrops(self) -> ChatShareThemeBackdrops:
+        """
+        Use this method to get the list of backdrops,
+            which can be used as the background of a theme of the screen for
+            sharing a link to a user or a chat.
+        Requires no parameters.
+
+        Args:
+            user_id: Unique identifier for the target chat or @username of the supergroup/channel.
+            limit: The maximum number of messages to return; 1-20.
+        """
+        response = self._make_request("getUserPersonalChatMessages", method="GET")
+        return ChatShareThemeBackdrops.model_validate(response)
+
     def get_user_personal_chat_messages(
         self, user_id: int, limit: int
     ) -> List[Message]:
@@ -2546,6 +2714,25 @@ class Telegram:
         response = self._make_request(
             "answerCallbackQuery", method="POST", data=payload
         )
+        return bool(response)
+
+    def answer_widget_query(
+        self, widget_query_id: str, data: str | None = None
+    ) -> bool:
+        """
+        Send an answer to a query from a widget.
+        The query must be answered within 15 seconds.
+        The answer is received only by the widget that sent the query and doesn't change data of the widget;
+         use editMessageWidgetData or editSharedWidgetData to change it.
+        On success, True is returned.
+
+        Args:
+            widget_query_id: Unique identifier for the query to be answered.
+            data: Data to be returned to the widget, 0-1024 bytes.
+        """
+        payload = {"widget_query_id": widget_query_id, "data": data}
+
+        response = self._make_request("answerWidgetQuery", method="POST", data=payload)
         return bool(response)
 
     def answer_guest_query(
@@ -2981,7 +3168,13 @@ class Telegram:
         )
         return bool(response)
 
-    def verify_user(self, user_id: int, custom_description: str | None = None) -> bool:
+    def verify_user(
+        self,
+        user_id: int,
+        custom_description: str | None = None,
+        custom_description_parse_mode: str | None = None,
+        custom_description_entities: List[MessageEntity] | None = None,
+    ) -> bool:
         """
         Verify a user on behalf of the organization represented by the bot.
 
@@ -2993,12 +3186,18 @@ class Telegram:
         payload = {
             "user_id": user_id,
             "custom_description": custom_description,
+            "custom_description_parse_mode": custom_description_parse_mode,
+            "custom_description_entities": custom_description_entities,
         }
         response = self._make_request("verifyUser", method="POST", data=payload)
         return bool(response)
 
     def verify_chat(
-        self, chat_id: int | str, custom_description: str | None = None
+        self,
+        chat_id: int | str,
+        custom_description: str | None = None,
+        custom_description_parse_mode: str | None = None,
+        custom_description_entities: List[MessageEntity] | None = None,
     ) -> bool:
         """
         Verify a chat (e.g., channel) on behalf of the organization represented by the bot.
@@ -3012,6 +3211,8 @@ class Telegram:
         payload = {
             "chat_id": chat_id,
             "custom_description": custom_description,
+            "custom_description_parse_mode": custom_description_parse_mode,
+            "custom_description_entities": custom_description_entities,
         }
         response = self._make_request("verifyChat", method="POST", data=payload)
         return bool(response)
@@ -3088,8 +3289,8 @@ class Telegram:
 
     def set_business_account_name(
         self,
-        business_connection_id: str,
         first_name: str,
+        business_connection_id: str,
         last_name: str | None = None,
     ) -> bool:
         """
@@ -3153,8 +3354,8 @@ class Telegram:
 
     def set_business_account_profile_photo(
         self,
-        business_connection_id: str,
         photo: InputProfilePhoto,
+        business_connection_id: str,
         is_public: bool | None = None,
     ) -> bool:
         """
@@ -3204,9 +3405,9 @@ class Telegram:
 
     def set_business_account_gift_settings(
         self,
-        business_connection_id: str,
         show_gift_button: bool,
         accepted_gift_types: AcceptedGiftTypes,
+        business_connection_id: str,
     ) -> bool:
         """
         Change the privacy settings for incoming gifts in a managed business account.
@@ -3373,6 +3574,17 @@ class Telegram:
         response = self._make_request("getChatGifts", method="GET", params=payload)
         return OwnedGiftAdapter.validate_python(response)
 
+    def get_unique_gift(self, name: str | int) -> OwnedGift:
+        """
+        Use this method to get information about a unique gift by its name.
+
+        Args:
+            name: Use this method to get information about a unique gift by its name.
+        """
+        payload = {"name": name}
+        response = self._make_request("getUniqueGift", method="GET", params=payload)
+        return OwnedGiftAdapter.validate_python(response)
+
     def convert_gift_to_stars(
         self, business_connection_id: str, owned_gift_id: str
     ) -> bool:
@@ -3393,8 +3605,8 @@ class Telegram:
 
     def upgrade_gift(
         self,
-        business_connection_id: str,
         owned_gift_id: str,
+        business_connection_id: str,
         keep_original_details: bool | None = None,
         star_count: int | None = None,
     ) -> bool:
@@ -3420,9 +3632,9 @@ class Telegram:
 
     def transfer_gift(
         self,
-        business_connection_id: str,
         owned_gift_id: str,
         new_owner_chat_id: int,
+        business_connection_id: str,
         star_count: int | None = None,
     ) -> bool:
         """
@@ -3447,11 +3659,37 @@ class Telegram:
         response = self._make_request("transferGift", method="POST", data=payload)
         return bool(response)
 
+    def delete_business_account_Gift(
+        self,
+        owned_gift_id: str,
+        business_connection_id: str,
+        star_count: int | None = None,
+    ) -> bool:
+        """
+        Deletes a regular gift owned by a managed business account without receiving Telegram Stars for it.
+        Requires the can_convert_gifts_to_stars business bot right.
+        The gift can be deleted only if it isn't limited (the field total_count of the Gift is omitted)
+        and wasn't refunded
+
+        Args:
+            business_connection_id: Unique identifier of the business connection.
+            owned_gift_id: Unique identifier of the regular gift that should be transferred.
+        """
+        payload = {
+            "business_connection_id": business_connection_id,
+            "owned_gift_id": owned_gift_id,
+            "star_count": star_count,
+        }
+        response = self._make_request(
+            "deleteBusinessAccountGift", method="POST", data=payload
+        )
+        return bool(response)
+
     def post_story(
         self,
-        business_connection_id: str,
         content: InputStoryContent,
         active_period: int,
+        business_connection_id: str,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -3487,10 +3725,10 @@ class Telegram:
 
     def repost_story(
         self,
-        business_connection_id: str,
         from_chat_id: int,
         from_story_id: int,
         active_period: int,
+        business_connection_id: str,
         post_to_chat_page: bool | None = None,
         protect_content: bool | None = None,
     ) -> Story:
@@ -3520,9 +3758,9 @@ class Telegram:
 
     def edit_story(
         self,
-        business_connection_id: str,
         story_id: int,
         content: InputStoryContent,
+        business_connection_id: str,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -3633,14 +3871,14 @@ class Telegram:
 
     def edit_message_text(
         self,
-        text: str | None = None,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        text: str | None = None,
         inline_message_id: str | None = None,
+        business_connection_id: str | None = None,
         parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
-        link_preview_options: LinkPreviewOptions | None = None,
+        link_preview_options: LinkPreviewOptions | None = LinkPreviewOptions(),
         rich_message: InputRichMessage | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3665,10 +3903,10 @@ class Telegram:
             )
 
         payload = {
-            "business_connection_id": business_connection_id,
             "chat_id": chat_id,
             "message_id": message_id,
             "inline_message_id": inline_message_id,
+            "business_connection_id": business_connection_id,
             "text": text,
             "parse_mode": parse_mode,
             "entities": entities,
@@ -3684,10 +3922,10 @@ class Telegram:
 
     def edit_message_caption(
         self,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
         inline_message_id: str | None = None,
+        business_connection_id: str | None = None,
         caption: str | None = None,
         parse_mode: str | None = "html",
         caption_entities: List[MessageEntity] | None = None,
@@ -3715,8 +3953,8 @@ class Telegram:
             )
 
         payload = {
-            "business_connection_id": business_connection_id,
             "chat_id": chat_id,
+            "business_connection_id": business_connection_id,
             "message_id": message_id,
             "inline_message_id": inline_message_id,
             "caption": caption,
@@ -3734,9 +3972,9 @@ class Telegram:
     def edit_message_media(
         self,
         media: InputMedia,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        business_connection_id: str | None = None,
         inline_message_id: str | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3779,9 +4017,9 @@ class Telegram:
         self,
         latitude: float,
         longitude: float,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        business_connection_id: str | None = None,
         inline_message_id: str | None = None,
         live_period: int | None = None,
         horizontal_accuracy: float | None = None,
@@ -3832,9 +4070,9 @@ class Telegram:
 
     def stop_message_live_location(
         self,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
+        business_connection_id: str | None = None,
         inline_message_id: str | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3870,9 +4108,9 @@ class Telegram:
 
     def edit_message_checklist(
         self,
-        business_connection_id: str,
         chat_id: int,
         message_id: int,
+        business_connection_id: str,
         checklist: InputChecklist,
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
@@ -3901,13 +4139,78 @@ class Telegram:
 
         return Message.model_validate(response)
 
+    def edit_message_widgetData(
+        self,
+        chat_id: int | None = None,
+        message_id: int | None = None,
+        inline_message_id: str | None = None,
+        public_data: str | None = None,
+        chat_data: str | None = None,
+    ) -> Message | bool:
+        """
+        Edit a checklist on behalf of a connected business account.
+        Edit data of a widget in a message sent by the bot or via the bot (for inline bots).
+        Public data of a shared widget can be changed at most once per second.
+        On success, True is returned.
+
+        Args:
+            chat_id: Chat ID or @username of the target chat/bot.
+            public_data: New public data of the widget, 0-1024 bytes; pass an empty string to remove the public data. If omitted, then the public data isn't changed.
+            chat_data: New data of the widget, which is specific to the message, 0-1024 bytes; pass an empty string to remove the data. If omitted, then the data isn't changed.
+
+            See full parameters here: [editMessageWidgetData](https://core.telegram.org/bots/api#editMessageWidgetData)
+        """
+        payload = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "inline_message_id": inline_message_id,
+            "public_data": public_data,
+            "chat_data": chat_data,
+        }
+        response = self._make_request(
+            "editMessageWidgetData", method="POST", data=payload
+        )
+        if isinstance(response, bool):
+            return bool(response)
+
+        return Message.model_validate(response)
+
+    def edit_shared_widget_data(
+        self,
+        widget_id: str,
+        public_data: str,
+        cache_time: str | None = None,
+    ) -> Message | bool:
+        """
+        Use this method to edit public data of a shared widget created by the bot.
+        A shared widget can be edited at most once per second.
+        On success, True is returned.
+
+        Args:
+            chat_id: Chat ID or @username of the target chat/bot.
+            public_data: New public data of the widget, 0-1024 bytes; pass an empty string to remove the public data. If omitted, then the public data isn't changed.
+            chat_data: New data of the widget, which is specific to the message, 0-1024 bytes; pass an empty string to remove the data. If omitted, then the data isn't changed.
+        """
+        payload = {
+            "widget_id": widget_id,
+            "public_data": public_data,
+            "cache_time": cache_time,
+        }
+        response = self._make_request(
+            "editSharedWidgetData", method="POST", data=payload
+        )
+        if isinstance(response, bool):
+            return bool(response)
+
+        return Message.model_validate(response)
+
     def edit_message_reply_markup(
         self,
-        business_connection_id: str | None = None,
         chat_id: int | str | None = None,
         message_id: int | None = None,
         inline_message_id: str | None = None,
         reply_markup: InlineKeyboardMarkup | None = None,
+        business_connection_id: str | None = None,
     ) -> Message | bool:
         """
         Edit only the reply markup (inline keyboard) of a message.
@@ -3974,7 +4277,7 @@ class Telegram:
         parse_mode: str | None = "html",
         entities: List[MessageEntity] | None = None,
         rich_message: InputRichMessage | None = None,
-        link_preview_options: LinkPreviewOptions | None = None,
+        link_preview_options: LinkPreviewOptions | None = LinkPreviewOptions(),
         reply_markup: InlineKeyboardMarkup | None = None,
     ) -> bool:
         """
@@ -4269,7 +4572,7 @@ class Telegram:
 
     def send_sticker(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         sticker: InputFile | str,
         business_connection_id: str | None = None,
         message_thread_id: int | None = None,
@@ -4299,6 +4602,8 @@ class Telegram:
 
             - See full parameters here: [sendSticker](https://core.telegram.org/bots/api#sendsticker)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "business_connection_id": business_connection_id,
@@ -4636,7 +4941,7 @@ class Telegram:
 
     def send_rich_message(
         self,
-        chat_id: int | str,
+        chat_id: int | str | None,
         rich_message: InputRichMessage,
         message_thread_id: int | None = None,
         business_connection_id: str | None = None,
@@ -4660,6 +4965,8 @@ class Telegram:
 
             See full parameters here: [sendRichMessage](https://core.telegram.org/bots/api#sendrichmessage)
         """
+        _validate_chat_id_or_ephemeral_reply(chat_id, ephemeral_message_parameters)
+
         payload = {
             "chat_id": chat_id,
             "rich_message": rich_message,
