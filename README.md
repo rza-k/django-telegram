@@ -54,15 +54,85 @@ Requirements are listed in `pyproject.toml` (Python 3.13+ at the time of writing
 
 ## Quick start
 
-This walks you from zero to a bot that answers `/start`. It has five steps:
+This walks you from zero to a bot that answers `/start`. It has six steps:
 
-1. Configure your settings
-2. Create the bot client
-3. Write a handler
-4. Add the webhook view and URL
-5. Tell Telegram where your webhook is
+1. Add the URL
+2. Add the webhook view
+3. Configure your settings
+4. Create the bot client
+5. Write a handler
+6. Tell Telegram where your webhook is
 
-### 1. Configure your settings
+### 1. Add the URL
+
+Create a Django app for your bot (this guide calls it `bot`):
+
+```bash
+python manage.py startapp bot
+```
+
+Add it to `INSTALLED_APPS`, then add the route to the app, and include the app in your project URLs:
+
+```python
+# bot/urls.py
+from django.urls import path
+
+from .views import TelegramWebhookView
+
+app_name = "bot"
+
+urlpatterns = [
+    path("webhook/", TelegramWebhookView.as_view(), name="webhook"),
+]
+```
+
+```python
+# config/urls.py
+from django.urls import include, path
+
+urlpatterns = [
+    path("bot/", include("bot.urls", namespace="bot")),
+]
+```
+
+Your webhook is now served at `https://your-domain.com/bot/webhook/`.
+
+### 2. Add the webhook view
+
+The view receives Telegram's updates and passes them to the dispatcher:
+
+```python
+# bot/views.py
+import logging
+
+from django_telegram import Dispatcher, Update
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+logger = logging.getLogger(__name__)
+
+
+class TelegramWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request: Request) -> Response:
+        try:
+            update = Update(**request.data)
+            Dispatcher(update).dispatch()
+        except Exception:
+            logger.exception("Error while processing Telegram update")
+
+        # Always answer 200, otherwise Telegram keeps retrying the same update.
+        return Response({"ok": True}, status=status.HTTP_200_OK)
+```
+
+> [!NOTE]
+> The view uses Django REST framework only because it is convenient. The library itself does not depend on it. Any Django view that builds an `Update` from the request body and calls `Dispatcher(update).dispatch()` works. `authentication_classes = []` and `permission_classes = []` make sure your project's default DRF permissions do not reject Telegram's requests.
+
+### 3. Configure your settings
 
 Create a bot with [@BotFather](https://t.me/BotFather) to get a token, then add a `TELEGRAM` dictionary to your Django settings:
 
@@ -94,15 +164,9 @@ If a required key is missing, `ImproperlyConfigured` is raised and the message t
 > }
 > ```
 
-### 2. Create the bot client
+### 4. Create the bot client
 
-Create a Django app for your bot (this guide calls it `bot`):
-
-```bash
-python manage.py startapp bot
-```
-
-Add it to `INSTALLED_APPS`, then create one shared client that all your handlers will import:
+Create one shared client that all your handlers will import:
 
 ```python
 # bot/client.py
@@ -127,7 +191,7 @@ bot/
     └── command_handlers.py
 ```
 
-### 3. Write a handler
+### 5. Write a handler
 
 Handlers are classes. You inherit from one base class per kind of update and implement `handle(self, update)`. Commands (any message that starts with `/`) go to `CommandHandler`:
 
@@ -165,68 +229,7 @@ from .handlers import command_handlers  # noqa: F401
 > [!NOTE]
 > `bot/__init__.py` runs before Django's app registry is ready. If a handler file imports your Django models at the top, startup fails with `AppRegistryNotReady`. Import the models inside `handle()` instead.
 
-### 4. Add the webhook view and URL
-
-The view receives Telegram's updates and passes them to the dispatcher:
-
-```python
-# bot/views.py
-import logging
-
-from django_telegram import Dispatcher, Update
-from rest_framework import status
-from rest_framework.request import Request
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-logger = logging.getLogger(__name__)
-
-
-class TelegramWebhookView(APIView):
-    authentication_classes = []
-    permission_classes = []
-
-    def post(self, request: Request) -> Response:
-        try:
-            update = Update(**request.data)
-            Dispatcher(update).dispatch()
-        except Exception:
-            logger.exception("Error while processing Telegram update")
-
-        # Always answer 200, otherwise Telegram keeps retrying the same update.
-        return Response({"ok": True}, status=status.HTTP_200_OK)
-```
-
-Add the route to the app, then include the app in your project URLs:
-
-```python
-# bot/urls.py
-from django.urls import path
-
-from .views import TelegramWebhookView
-
-app_name = "bot"
-
-urlpatterns = [
-    path("webhook/", TelegramWebhookView.as_view(), name="webhook"),
-]
-```
-
-```python
-# config/urls.py
-from django.urls import include, path
-
-urlpatterns = [
-    path("bot/", include("bot.urls", namespace="bot")),
-]
-```
-
-Your webhook is now served at `https://your-domain.com/bot/webhook/`.
-
-> [!NOTE]
-> The view uses Django REST framework only because it is convenient. The library itself does not depend on it. Any Django view that builds an `Update` from the request body and calls `Dispatcher(update).dispatch()` works. `authentication_classes = []` and `permission_classes = []` make sure your project's default DRF permissions do not reject Telegram's requests.
-
-### 5. Tell Telegram where your webhook is
+### 6. Tell Telegram where your webhook is
 
 Telegram needs to know which URL to send updates to. Register it once with a `curl` request to the Bot API (replace `<BOT_TOKEN>` with your bot token and the URL with your own):
 
@@ -275,7 +278,7 @@ The next section shows one example of each.
 
 ## More examples
 
-All examples assume the shared client from step 2 (`from bot.client import bot`) and the layout below. Remember to import each new file in `bot/__init__.py`.
+All examples assume the shared client from step 4 (`from bot.client import bot`) and the layout below. Remember to import each new file in `bot/__init__.py`.
 
 ```text
 bot/handlers/
